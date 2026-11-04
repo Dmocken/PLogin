@@ -1,0 +1,39 @@
+# ---- 构建产物 ----
+/build/
+/out/
+/dist/
+*.class
+
+# ---- 本地 Minecraft 服务端 / 依赖（Mojang 版权产物，不入库） ----
+/versions/
+/.mcserver/
+/server/
+
+# ---- 运行时数据 ----
+/config/
+/logs/
+/world/
+/world_nether/
+/world_the_end/
+/backups/
+*.log
+*.jar
+!.github/**/*.jar
+
+# ---- IDE ----
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+.settings/
+.project
+.classpath
+*.swp
+*.bak
+*.orig
+
+# ---- 系统 ----
+.DS_Store
+Thumbs.db
+desktop.ini

@@ -1,0 +1,92 @@
+# 参与贡献
+
+感谢你愿意改进 PLogin。无论是报告问题、补充文档，还是提交代码，都很有价值。
+
+- 发现了**安全问题**？请按 [SECURITY.md](SECURITY.md) 私下反馈，不要开公开 issue。
+- 使用中遇到问题？请先用 [常见问题](README.md#常见问题) 和 [技术文档](docs/TECHNICAL.md) 自查一遍。
+- 想提新功能？先开 issue 描述使用场景，避免写完才发现方向不对。
+
+## 开发环境
+
+| 项目 | 要求 |
+|---|---|
+| JDK | 21 或更高（开发环境使用 Java 27） |
+| Minecraft | 26.2 服务端 jar（Mojang 官方名，非 intermediary） |
+| Fabric Loader | 0.19.5 或更高 |
+| Fabric API | 对应 26.2 的版本 |
+
+本项目**不使用 Gradle / Loom**，直接 `javac` 编译。源码里写的是 Mojang 官方映射名
+（`net.minecraft.server.level.ServerPlayer` 这种），因为运行时 Fabric Loader 日志里是
+`Mappings not present!`。
+
+## 构建
+
+```bash
+# 指向一个已安装好 Fabric + Fabric API 的服务端目录
+MC_SERVER=/path/to/minecraft-server ./build.sh
+# 产物：build/plogin-1.0.0.jar
+```
+
+未设置 `MC_SERVER` 时，脚本会依次尝试仓库下的 `.mcserver/`、`../minecraft-bingo`、
+`$HOME/mc/minecraft-bingo`。
+
+目录需要包含：
+
+- `versions/26.2/server-26.2.jar`
+- `mods/fabric-api-*.jar`
+- `.fabric/processedMods/*.jar`
+- `libraries/**/*.jar`
+
+> 请**不要**把服务端 jar、日志、世界存档提交进仓库，`.gitignore` 已经排除了这些路径。
+
+## 代码结构
+
+| 路径 | 职责 |
+|---|---|
+| `PLogin.java` / `PLoginMod.java` | 模组入口、初始化、日志 |
+| `auth/AuthManager.java` | 认证状态机（未登录 / 待注册 / 待登录 / 已登录） |
+| `auth/HybridAuth.java` | 正版验证失败后回退离线 UUID 的核心逻辑 |
+| `auth/LimboManager.java` | 登录前的虚空维度隔离与原位置恢复 |
+| `auth/BackupVerification.java` | 正版离线备份密码的重连令牌 |
+| `auth/PacketGate.java` | 未登录玩家的数据包白名单 |
+| `auth/PasswordHasher.java` / `UserStore.java` | PBKDF2 哈希、账号持久化 |
+| `command/AuthCommands.java` | `/register` `/login` `/plogin` 等命令 |
+| `config/Config.java` | 配置读写与字段收敛 |
+| `skin/SkinService.java` | Mojang / LittleSkin / MineSkin 皮肤属性 |
+| `mixin/` | 对原版登录、PlayerList、数据包、伤害与传送的改造 |
+| `util/Ui.java` | 标题、聊天提示等客户端界面工具 |
+
+改动 Mixin 前请先读 [docs/TECHNICAL.md](docs/TECHNICAL.md) 的 §2–§7，
+里面记录了每个注入点的时序原因（尤其是为什么必须在 `placeNewPlayer` 的 HEAD 阶段切维度）。
+
+## 编码约定
+
+- 面向 Java 21，避免引入新依赖；能用的 JDK 标准库优先。
+- 注释用中文，写**为什么**而不是**做了什么**；对外提示文案放在 `Messages.java` 并保持中英双语。
+- 新增配置字段要有默认值，并保证 `Config.normalize()` 能兜住非法值。
+- 新日志统一带 `[PLogin]` 前缀，级别不要滥用。
+- 不要破坏「客户端零模组」这条底线：任何需要玩家装 mod 的方案都不接受。
+
+## 提交信息
+
+参考 Conventional Commits，一句话说清改动：
+
+```text
+feat(auth): 支持正版玩家设置离线备份密码
+fix(mixin): 修复 limbo 坐标覆盖真实存档的问题
+docs: 补充服主配置说明
+chore(build): 构建脚本支持 MC_SERVER 自动探测
+```
+
+## Pull Request 检查清单
+
+- [ ] `./build.sh` 能编译通过，没有新增告警
+- [ ] 在真实服务端上验证过：正版玩家能进、离线玩家能注册 / 登录
+- [ ] 没有提交 `build/`、`versions/`、`logs/`、`config/`、世界存档
+- [ ] 面向服主的行为变化，已同步更新 [README.md](README.md)
+- [ ] 实现细节变化，已同步更新 [docs/TECHNICAL.md](docs/TECHNICAL.md)
+- [ ] 玩家可见文案变化，已同步更新 [docs/文案.md](docs/文案.md)
+
+## 许可证
+
+提交代码即表示同意以 [AGPL-3.0](LICENSE) 授权你的贡献。

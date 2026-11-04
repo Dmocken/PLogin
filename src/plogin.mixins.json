@@ -1,0 +1,24 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "com.pimeng.plogin.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "server": [
+    "LoginThreadMixin",
+    "LoginHelloMixin",
+    "PlayerListMixin",
+    "PlayerInfoFilterMixin",
+    "QuitMessageMixin",
+    "ServerPlayerGuardMixin",
+    "LivingEntityGuardMixin",
+    "KillCommandGuardMixin",
+    "TeleportCommandGuardMixin",
+    "ConnectionMixin",
+    "CommandsMixin",
+    "ServerGamePacketListenerChatMixin",
+    "DedicatedServerMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

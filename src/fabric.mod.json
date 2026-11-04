@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "id": "plogin",
+  "version": "1.0.0",
+  "name": "PLogin Hybrid Authentication",
+  "description": "Hybrid (premium + offline) login for Minecraft 26.2 servers: keeps online-mode=true, lets cracked players join with offline UUIDs, requires /register + /login for them, and forwards Mojang skin properties for premium players.",
+  "authors": ["Pimeng"],
+  "license": "AGPL-3.0",
+  "environment": "server",
+  "entrypoints": {
+    "server": ["com.pimeng.plogin.PLoginMod"]
+  },
+  "mixins": ["plogin.mixins.json"],
+  "depends": {
+    "fabricloader": ">=0.19.5",
+    "minecraft": "26.2",
+    "fabric-api": "*"
+  }
+}

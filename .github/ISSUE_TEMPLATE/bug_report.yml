@@ -1,0 +1,62 @@
+name: 缺陷报告
+description: 报告一个可复现的问题
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感谢反馈。请先确认已经读过 [常见问题](../README.md#常见问题)。
+        **安全问题请勿在此提交**，改用 Security → Report a vulnerability 私下报告。
+
+  - type: input
+    id: versions
+    attributes:
+      label: 版本信息
+      description: Minecraft、Fabric Loader、Java、PLogin 版本
+      placeholder: "Minecraft 26.2 / Fabric Loader 0.19.5 / Java 27 / PLogin 1.0.0"
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: 复现步骤
+      description: 越具体越好，包括用的启动器、账号状态、执行了哪条命令
+      placeholder: |
+        1. 用 HMCL 以离线模式启动
+        2. 连接服务器
+        3. 执行 /register ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: 预期结果
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: 实际结果
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: 相关日志
+      description: 服务端 console 或 latest.log 的相关片段，记得抹掉 IP 与玩家名
+      render: text
+    validations:
+      required: false
+
+  - type: textarea
+    id: config
+    attributes:
+      label: config/plogin/config.json
+      description: 与问题相关的配置项（请删掉 MineSkin API Key 等敏感内容）
+      render: json
+    validations:
+      required: false

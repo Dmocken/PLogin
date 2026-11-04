@@ -1,0 +1,20 @@
+# 统一换行符，避免 Windows / Linux 来回改行尾
+* text=auto eol=lf
+
+*.java    text eol=lf
+*.json    text eol=lf
+*.md      text eol=lf
+*.yml     text eol=lf
+*.yaml    text eol=lf
+*.sh      text eol=lf
+*.bat     text eol=crlf
+*.cmd     text eol=crlf
+
+# 二进制
+*.jar     binary
+*.png     binary
+*.jpg     binary
+*.dat     binary
+
+# 让 GitHub 统计时忽略这些
+docs/     linguist-documentation
