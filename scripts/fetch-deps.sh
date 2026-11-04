@@ -2,7 +2,7 @@
 # fetch-deps.sh - 一键拉取 Minecraft 26.2 + Fabric 依赖，并（可选）直接构建
 #
 #   ./scripts/fetch-deps.sh              # 只拉依赖到 .mcserver/
-#   ./scripts/fetch-deps.sh --build      # 拉完直接编译出 build/plogin-1.0.1.jar
+#   ./scripts/fetch-deps.sh --build      # 拉完直接编译出 build/plogin-1.1.0.jar
 #   ./scripts/fetch-deps.sh --force      # 忽略已有文件，全部重新下载
 #
 # 依赖全部落在 .mcserver/（已在 .gitignore 中排除），不会提交进仓库。

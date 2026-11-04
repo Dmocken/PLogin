@@ -6,10 +6,11 @@ import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.pimeng.plogin.Messages;
 import com.pimeng.plogin.PLogin;
-import com.pimeng.plogin.auth.AuthManager;
+import com.pimeng.plogin.auth.AccountService;
+import com.pimeng.plogin.auth.ConfigAuth;
+import com.pimeng.plogin.auth.HybridAuth;
 import com.pimeng.plogin.auth.PasswordHasher;
 import com.pimeng.plogin.auth.UserRecord;
-import com.pimeng.plogin.auth.HybridAuth;
 import java.util.Locale;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
@@ -18,7 +19,10 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.permissions.Permissions;
 
 /**
- * /register /login /logout /changepassword 以及管理员命令 /plogin。
+ * 已进入世界后的账号命令，以及管理员命令 /plogin。
+ *
+ * <p>注册/登录已经移到配置阶段的对话框；这里只保留：
+ * 正版玩家设置离线备份密码（/register）、修改密码、登出，以及管理员维护。
  */
 public final class AuthCommands {
     private AuthCommands() {
@@ -31,11 +35,6 @@ public final class AuthCommands {
                         .then(Commands.argument("confirm", StringArgumentType.word())
                                 .executes(AuthCommands::execRegister))));
 
-        dispatcher.register(Commands.literal("login")
-                .requires(source -> source.getEntity() instanceof ServerPlayer)
-                .then(Commands.argument("password", StringArgumentType.word())
-                        .executes(AuthCommands::execLogin)));
-
         dispatcher.register(Commands.literal("logout")
                 .requires(source -> source.getEntity() instanceof ServerPlayer)
                 .executes(AuthCommands::execLogout));
@@ -47,7 +46,6 @@ public final class AuthCommands {
                                 .executes(AuthCommands::execChangePassword))));
 
         registerAlias(dispatcher, "reg", "register");
-        registerAlias(dispatcher, "l", "login");
         registerAlias(dispatcher, "cp", "changepassword");
 
         dispatcher.register(Commands.literal("plogin")
@@ -77,11 +75,6 @@ public final class AuthCommands {
                     .then(Commands.argument("password", StringArgumentType.word())
                             .then(Commands.argument("confirm", StringArgumentType.word())
                                     .executes(AuthCommands::execRegister))));
-        } else if ("login".equals(canonical)) {
-            dispatcher.register(Commands.literal(alias)
-                    .requires(source -> source.getEntity() instanceof ServerPlayer)
-                    .then(Commands.argument("password", StringArgumentType.word())
-                            .executes(AuthCommands::execLogin)));
         } else if ("changepassword".equals(canonical)) {
             dispatcher.register(Commands.literal(alias)
                     .requires(source -> source.getEntity() instanceof ServerPlayer)
@@ -99,19 +92,12 @@ public final class AuthCommands {
         ServerPlayer player = player(context);
         String password = StringArgumentType.getString(context, "password");
         String confirm = StringArgumentType.getString(context, "confirm");
-        PLogin.auth().requestRegister(player, password, confirm);
-        return 1;
-    }
-
-    private static int execLogin(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
-        ServerPlayer player = player(context);
-        String password = StringArgumentType.getString(context, "password");
-        PLogin.auth().requestLogin(player, password);
+        AccountService.setPremiumBackup(player, password, confirm);
         return 1;
     }
 
     private static int execLogout(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
-        PLogin.auth().requestLogout(player(context));
+        AccountService.logout(player(context));
         return 1;
     }
 
@@ -119,7 +105,7 @@ public final class AuthCommands {
         ServerPlayer player = player(context);
         String oldPassword = StringArgumentType.getString(context, "oldPassword");
         String newPassword = StringArgumentType.getString(context, "newPassword");
-        PLogin.auth().requestChangePassword(player, oldPassword, newPassword);
+        AccountService.changePassword(player, oldPassword, newPassword);
         return 1;
     }
 
@@ -142,8 +128,10 @@ public final class AuthCommands {
         UserRecord record = PLogin.users().find(name);
         if (online != null) {
             String type = HybridAuth.isOfflineProfile(online.getGameProfile()) ? "offline" : "premium";
-            AuthManager.Session session = PLogin.auth().session(online);
-            String state = session == null ? "authenticated" : session.state.name().toLowerCase(Locale.ROOT);
+            ConfigAuth.Session session = PLogin.configAuth().session(online.getUUID());
+            String state = session == null
+                    ? "authenticated"
+                    : session.state().name().toLowerCase(Locale.ROOT);
             String lastLogin = record == null ? "-" : String.valueOf(record.lastLoginAt);
             context.getSource().sendSuccess(() -> Messages.get("admin.info",
                     online.getGameProfile().name(), online.getUUID(), type, state, lastLogin), false);
@@ -162,17 +150,13 @@ public final class AuthCommands {
         String name = StringArgumentType.getString(context, "name");
         MinecraftServer server = context.getSource().getServer();
         boolean removed = PLogin.users().remove(name);
-        ServerPlayer online = server.getPlayerList().getPlayer(name);
-        boolean premiumBypass = PLogin.config() != null && PLogin.config().premiumBypass;
-        if (online != null && removed && (!premiumBypass || HybridAuth.isOfflineProfile(online.getGameProfile()))) {
-            PLogin.auth().forceState(online, AuthManager.State.PENDING_REGISTER);
-        }
         if (!removed) {
             context.getSource().sendFailure(Messages.get("admin.not_found", name));
             return 0;
         }
+        ServerPlayer online = server.getPlayerList().getPlayer(name);
         context.getSource().sendSuccess(() -> Messages.get("admin.unregistered", name), true);
-        PLogin.LOGGER.info("[PLogin] 管理员注销了用户 {}（在线={}）", name, online != null);
+        PLogin.LOGGER.info("[PLogin] 管理员注销了用户 {}（在线={}；在线玩家需重新连接后生效）", name, online != null);
         return 1;
     }
 
@@ -192,5 +176,4 @@ public final class AuthCommands {
         PLogin.LOGGER.info("[PLogin] 管理员重置了用户 {} 的密码", record.name);
         return 1;
     }
-
 }

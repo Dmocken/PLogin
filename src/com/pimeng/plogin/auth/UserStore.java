@@ -20,7 +20,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * premium-names.json : 成功通过正版验证的名字 -> 正版 UUID（用于防止冒名）
  *
  * 安全约定（1.0.1 修复）：
- * - 读取失败/JSON 损坏时进入 {@link #isCorrupted()} 状态：调用方（AuthManager）拒绝
+ * - 读取失败/JSON 损坏时进入 {@link #isCorrupted()} 状态：调用方（ConfigAuth）拒绝
  *   离线注册/登录，防止在“空账号库”上接受新注册导致账号抢注；正版验证不受影响。
  * - 保存失败时内存中的变更回滚，写方法返回 false；调用方不得把失败当成功报给玩家。
  */
@@ -136,7 +136,7 @@ public final class UserStore {
         if (users.containsKey(key)) {
             return false;
         }
-        // 是否允许离线注册正版名由 AuthManager 按 premiumNameProtection 决定；
+        // 是否允许离线注册正版名由 ConfigAuth 按 premiumNameProtection 决定；
         // 数据层不再拦截，否则 protection=false 时会出现“注册提示已注册、登录提示未注册”的死循环。
         users.put(key, record);
         if (!saveUsersLocked()) {

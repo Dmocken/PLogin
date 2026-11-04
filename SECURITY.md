@@ -6,8 +6,8 @@ PLogin 处在服务器的登录入口上，一个缺陷就可能让整个白名�
 
 | 版本 | 状态 |
 |---|---|
-| 1.0.x | ✅ 接收安全修复 |
-| 更早版本 | ❌ 请先升级 |
+| 1.1.x | ✅ 接收安全修复 |
+| 1.0.x / 更早 | ❌ 请先升级（1.0.x 的 limbo 方案已移除） |
 
 ## 如何报告
 
@@ -26,11 +26,14 @@ PLogin 处在服务器的登录入口上，一个缺陷就可能让整个白名�
 
 ## 重点关注的范围
 
-- 绕过 `/register` `/login` 直接进入已登录状态
+- 绕过配置阶段对话框直接进入已登录状态（伪造/重放 `ServerboundCustomClickActionPacket`、
+  抢在认证任务完成前触发 PrepareSpawn/JoinWorld、利用 `/debugconfig` 重配置等）
 - 离线玩家冒用已记录的正版名
-- 密码哈希、重连令牌（`BackupVerification`）、`users.json` 的越权读写
-- 未登录隔离被绕过：移动、聊天、命令、`/tp`、`/kill`、伤害、死亡重生、Tab 暴露
-- 通过数据包时序把玩家从 limbo 拉回主世界或泄露真实坐标
+- 密码哈希、`users.json` 的越权读写
+- transfer 凭据（`TransferVerification`）的伪造/重放/跨连接消费，或绕过 transfer 直接拿到正版 UUID
+- 认证会话串线：一条连接的动作影响另一条连接的登录状态，或读到别人的对话框内容
+- 伪造配置阶段的 finish/ack 报文提前进入世界
+- 未认证连接被提前放进 PlayerList、Tab 或世界
 
 ## 属于设计取舍、不算漏洞的行为
 
@@ -41,7 +44,8 @@ PLogin 处在服务器的登录入口上，一个缺陷就可能让整个白名�
 - `forceDisableSecureProfile=true` 让所有玩家的聊天不再带 Mojang 签名（失去聊天举报链）。
 - `premiumNameProtection=false` 允许离线玩家使用正版名，直到真实正版上线把他踢掉。
 - 某个正版名**第一次**登录之前存在抢注窗口。
-- `/list`、在线人数和服务器日志仍然能看到未登录玩家。
+- 未完成认证的连接仍会出现在服务器日志/连接列表里（但不在 PlayerList、Tab 或世界中）。
+- `kickOnTimeout=false` 时未完成登录的连接会一直占用一个玩家槽位。
 
 ## 部署侧建议
 

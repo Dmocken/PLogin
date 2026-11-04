@@ -16,11 +16,9 @@ public final class PLoginMod implements DedicatedServerModInitializer {
                 AuthCommands.register(dispatcher));
 
         ServerPlayConnectionEvents.JOIN.register((handler, sender, server) ->
-                PLogin.auth().onJoin(handler.player));
-        ServerPlayConnectionEvents.DISCONNECT.register((handler, server) ->
-                PLogin.auth().onDisconnect(handler.player));
+                PLogin.configAuth().onJoin(handler.player));
 
-        ServerTickEvents.END_SERVER_TICK.register(server -> PLogin.auth().tick(server));
+        ServerTickEvents.END_SERVER_TICK.register(server -> PLogin.configAuth().tick(server));
 
         ServerLifecycleEvents.SERVER_STARTING.register(PLogin::setServer);
         ServerLifecycleEvents.SERVER_STARTED.register(PLogin::onServerStarted);

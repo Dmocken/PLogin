@@ -3,6 +3,61 @@
 本项目的重要变更都记录在这里，格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，
 版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [1.1.0] - 2026-11-05
+
+### 变更
+
+- **登录改为原版 Configuration 阶段的对话框**。玩家通过正版验证/离线回退进入配置阶段后，
+  PLogin 在 `SynchronizeRegistriesTask` 与 `PrepareSpawnTask` 之间插入 `plogin:auth` 任务，
+  用原版 `ClientboundShowDialogPacket` 显示「注册账号 / 登录服务器」对话框，
+  玩家点击按钮后由 `ServerboundCustomClickActionPacket` 回传密码，认证通过才继续加载世界。
+- **完全移除 limbo 虚拟世界方案**：删除 `plogin:limbo` 维度、`LimboManager`、
+  冻结/失明/隐藏玩家/数据包白名单/传送与伤害保护等 10 个 Mixin。未登录玩家不再进入世界，
+  因此不需要隔离、隐藏或过滤。
+- **命令调整**：`/login` 不再提供；`/register` 仅用于正版玩家设置离线备份密码；
+  `/logout` 改为断开连接，重连后重新走对话框；`/changepassword` 保留（离线账号与正版备份密码均可改）。
+- **配置调整**：移除 `blindness`、`freezeMovement`，以及旧备份重连专用的
+  `backupRequireCookie`、`backupTokenWaitMs`、`backupTokenBindIp`；新增
+  `transferEnabled`、`transferHost`、`transferPort`、`transferTokenSeconds`、`transferBindIp`、
+  `transferTokenWaitMs`；`kickOnTimeout=false` 表示「不超时，保留对话框继续等待」，
+  `loginTimeoutSeconds` 表示对话框停留时间。
+- **备份密码改为“对话框验证 + 原版 transfer”**：密码通过后先发 `ClientboundStoreCookiePacket`
+  下发一次性凭据，再发 `clear_dialog`，50ms 后发送 `ClientboundTransferPacket` 回到同一服务端；
+  客户端以 TRANSFER intention 重连并带回 Cookie，登录阶段换成正版 UUID，跳过对话框，直接进入正版存档。
+  正版同名在线时拒绝这次备份登录并提示等待（不踢人）。
+- **需要 `server.properties` 设置 `accepts-transfers=true`**；未开启时原版会拒绝 TRANSFER 连接，
+  服务端启动会输出 WARN，备份密码登录回退为离线 UUID 登录。
+- **断开前先清 dialog**：超时、退出按钮、IP 封禁、账号锁定、transfer 等所有配置阶段离开动作，
+  都先发送 `ClientboundClearDialogPacket`。修复客户端停在自定义屏幕、按钮无响应、
+  只能点客户端强制断开、重连后又要求输密码的循环。
+- 对话框为静态内容，不实现逐字动画；同一服务端的 transfer 使用 16 字节随机 Cookie 凭据，
+  不引入 JWE/签名令牌格式。
+
+### 新增
+
+- `ConfigAuth`：配置阶段认证状态机（注册/登录/错误重试/IP 封禁/账号锁定/超时/退出/备份密码）。
+- `AuthDialogs`：用 `ConfirmationDialog` + `TextInput` + `CustomAll` 构建对话框。
+- `AuthConfigurationTask`：配置任务队列中的阻塞任务。
+- Mixin：`ServerConfigurationPacketListenerImplMixin`（插入任务）、
+  `ServerCommonPacketListenerMixin`（处理按钮回调/清理会话）、
+  `ServerGamePacketListenerImplMixin`（debugconfig 重配置标记）、
+  `ServerCommonPacketListenerAccessor`（读取底层 Connection）、
+  `LoginCookieMixin`（登录阶段 transfer Cookie）、
+  `ServerHandshakePacketListenerImplMixin`（记录连接 host）、
+  `ServerLoginPacketListenerAccessor`（读取 transferred）。
+- `TransferVerification`：一次性 transfer 凭据（16 字节、TTL、IP 绑定、一次性）。
+- `TransferState`：按连接隔离的 Cookie 响应与 handshake host。
+- 旧世界兼容：jar 内保留空的 `data/plogin` 数据包目录，避免升级后报 `Missing data pack plogin`；
+  进服时自动清理旧的 `Invulnerable`/`NoGravity` 冻结标记。
+
+### 安全
+
+- 密码通过对话框提交，不进入聊天栏和命令日志。
+- 登录时对空密码/超长密码直接按失败处理，不送进 PBKDF2，避免恶意 payload 拖垮哈希线程。
+- 认证成功后立即从会话表移除 Session，避免为每个进入世界的玩家残留配置监听器引用。
+- transfer 凭据是 16 字节 SecureRandom，默认 120 秒过期、绑定 IP、一次性消费；正版 UUID 只来自
+  `users.json` 的备份记录，不采用客户端输入。
+
 ## [1.0.1] - 2026-11-04
 
 ### 安全

@@ -39,7 +39,7 @@
 ```bash
 # 指向一个已安装好 Fabric + Fabric API 的服务端目录
 MC_SERVER=/path/to/minecraft-server ./build.sh
-# 产物：build/plogin-1.0.1.jar
+# 产物：build/plogin-1.1.0.jar
 ```
 
 Windows 用等价脚本：
@@ -70,20 +70,23 @@ $env:MC_SERVER = 'D:\path\to\minecraft-server'
 | 路径 | 职责 |
 |---|---|
 | `PLogin.java` / `PLoginMod.java` | 模组入口、初始化、日志 |
-| `auth/AuthManager.java` | 认证状态机（未登录 / 待注册 / 待登录 / 已登录） |
-| `auth/HybridAuth.java` | 正版验证失败后回退离线 UUID 的核心逻辑 |
-| `auth/LimboManager.java` | 登录前的虚空维度隔离与原位置恢复 |
-| `auth/BackupVerification.java` | 正版离线备份密码的重连令牌 |
-| `auth/PacketGate.java` | 未登录玩家的数据包白名单 |
+| `auth/ConfigAuth.java` | Configuration 阶段认证状态机（注册 / 登录 / 超时 / 封禁 / 备份 transfer） |
+| `auth/AuthConfigurationTask.java` | 插入配置任务队列的阻塞任务 |
+| `auth/AuthDialogs.java` | 原版 Dialog 模型（ConfirmationDialog + TextInput + CustomAll） |
+| `auth/AccountService.java` | 进服后的改密、正版备份密码、登出 |
+| `auth/HybridAuth.java` | 正版验证失败后回退离线 UUID / transfer 凭据换正版 UUID |
+| `auth/TransferVerification.java` | 一次性 transfer 凭据（TTL/IP/一次性） |
+| `auth/TransferState.java` | 按连接隔离的 transfer Cookie 与 handshake host |
 | `auth/PasswordHasher.java` / `UserStore.java` | PBKDF2 哈希、账号持久化 |
-| `command/AuthCommands.java` | `/register` `/login` `/plogin` 等命令 |
+| `command/AuthCommands.java` | `/register` `/logout` `/changepassword` `/plogin` 等命令 |
 | `config/Config.java` | 配置读写与字段收敛 |
 | `skin/SkinService.java` | Mojang / LittleSkin / MineSkin 皮肤属性 |
-| `mixin/` | 对原版登录、PlayerList、数据包、伤害与传送的改造 |
+| `mixin/` | 登录阶段混合验证、配置阶段任务注入、对话框回包 |
 | `util/Ui.java` | 标题、聊天提示等客户端界面工具 |
 
 改动 Mixin 前请先读 [docs/TECHNICAL.md](docs/TECHNICAL.md) 的 §2–§7，
-里面记录了每个注入点的时序原因（尤其是为什么必须在 `placeNewPlayer` 的 HEAD 阶段切维度）。
+里面记录了每个注入点的时序原因（尤其是为什么认证任务必须插在
+`returnToWorld` 的 HEAD、排在 PrepareSpawn/JoinWorld 之前）。
 
 ## 编码约定
 
@@ -107,7 +110,7 @@ chore(build): 构建脚本支持 MC_SERVER 自动探测
 ## Pull Request 检查清单
 
 - [ ] `./build.sh` 能编译通过，没有新增告警
-- [ ] 在真实服务端上验证过：正版玩家能进、离线玩家能注册 / 登录
+- [ ] 在真实服务端上验证过：正版玩家能进、离线玩家能在配置阶段完成对话框注册 / 登录
 - [ ] 没有提交 `build/`、`versions/`、`logs/`、`config/`、世界存档
 - [ ] 面向服主的行为变化，已同步更新 [README.md](README.md)
 - [ ] 实现细节变化，已同步更新 [docs/TECHNICAL.md](docs/TECHNICAL.md)

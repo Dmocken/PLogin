@@ -1,6 +1,6 @@
 package com.pimeng.plogin;
 
-import com.pimeng.plogin.auth.AuthManager;
+import com.pimeng.plogin.auth.ConfigAuth;
 import com.pimeng.plogin.auth.UserStore;
 import com.pimeng.plogin.config.Config;
 import java.nio.file.Path;
@@ -17,12 +17,12 @@ import org.slf4j.LoggerFactory;
  */
 public final class PLogin {
     public static final String MOD_ID = "plogin";
-    public static final String VERSION = "1.0.1";
+    public static final String VERSION = "1.1.0";
     public static final Logger LOGGER = LoggerFactory.getLogger("PLogin");
 
     private static Config config;
     private static UserStore users;
-    private static AuthManager auth;
+    private static ConfigAuth configAuth;
     private static ExecutorService executor;
     /** 皮肤查询专用线程池：允许被慢速第三方 API 拖住，但绝不占用认证线程。 */
     private static ExecutorService skinExecutor;
@@ -39,7 +39,7 @@ public final class PLogin {
 
         users = new UserStore(dataDir);
         if (!users.load()) {
-            // 数据损坏时进入“默认拒绝认证”模式（见 UserStore.isCorrupted / AuthManager.onJoin）。
+            // 数据损坏时进入“默认拒绝认证”模式（见 UserStore.isCorrupted / ConfigAuth.doBegin）。
             // 不让服务器崩溃，但不接受任何离线注册/登录。
             LOGGER.error("[PLogin] 检测到损坏的账号数据文件，已启用保护模式：离线认证暂停");
         }
@@ -55,7 +55,7 @@ public final class PLogin {
             return thread;
         });
 
-        auth = new AuthManager();
+        configAuth = new ConfigAuth();
         LOGGER.info("PLogin {} 已加载，数据目录: {}", VERSION, dataDir);
     }
 
@@ -66,9 +66,9 @@ public final class PLogin {
     public static void onServerStarted(MinecraftServer minecraftServer) {
         server = minecraftServer;
         if (minecraftServer.usesAuthentication()) {
-            LOGGER.info("[PLogin] 混合登录已启用（online-mode=true）：正版玩家验证后直接进入，离线玩家使用离线 UUID 并需要注册/登录");
+            LOGGER.info("[PLogin] 混合登录已启用（online-mode=true）：正版玩家验证后直接进入，离线玩家在配置阶段通过对话框注册/登录");
         } else {
-            LOGGER.info("[PLogin] 服务器 online-mode=false：所有玩家都按离线身份处理，必须注册/登录");
+            LOGGER.info("[PLogin] 服务器 online-mode=false：所有玩家都按离线身份处理，在配置阶段通过对话框注册/登录");
         }
         boolean effectiveSecureProfile = minecraftServer.enforceSecureProfile();
         LOGGER.info("[PLogin] enforce-secure-profile 有效值: {}（配置 forceDisableSecureProfile={}）",
@@ -79,6 +79,10 @@ public final class PLogin {
         }
         if (!minecraftServer.usesAuthentication() && config.premiumBypass) {
             LOGGER.info("[PLogin] 提示：online-mode=false 时无法认证正版身份，所有玩家都需要注册");
+        }
+        if (config.premiumPasswordBackup && config.transferEnabled && !minecraftServer.acceptsTransfers()) {
+            LOGGER.warn("[PLogin] 服务器未开启 accepts-transfers，备份密码登录无法 transfer 到正版 UUID/存档；"
+                    + "请在 server.properties 设置 accepts-transfers=true 并重启");
         }
     }
 
@@ -116,8 +120,8 @@ public final class PLogin {
         return users;
     }
 
-    public static AuthManager auth() {
-        return auth;
+    public static ConfigAuth configAuth() {
+        return configAuth;
     }
 
     public static ExecutorService executor() {

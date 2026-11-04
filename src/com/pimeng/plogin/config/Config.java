@@ -19,11 +19,24 @@ public final class Config {
     /** 总开关。关闭后 PLogin 完全不介入登录（online-mode=true 时恢复原版行为）。 */
     public boolean enabled = true;
 
-    /** 正版验证通过的玩家直接进入，不需要 /register /login。 */
+    /** 正版验证通过的玩家直接进入，不显示注册/登录对话框。 */
     public boolean premiumBypass = true;
 
     /** 正版验证成功时允许 /register 设置“离线备份密码”；正版不可用时可用它离线登录。 */
     public boolean premiumPasswordBackup = true;
+
+    /** 备份密码登录后，是否用原版 transfer 把离线连接转到正版 UUID/存档。 */
+    public boolean transferEnabled = true;
+    /** transfer 目标主机；空 = 使用客户端连接时使用的 host（推荐留空）。 */
+    public String transferHost = "";
+    /** transfer 目标端口；0 = 服务器端口。 */
+    public int transferPort = 0;
+    /** 一次性 transfer 凭据有效期（秒）。 */
+    public int transferTokenSeconds = 120;
+    /** transfer 凭据绑定发放时的 IP。 */
+    public boolean transferBindIp = true;
+    /** 登录阶段等待客户端返回 transfer Cookie 的最长时间（毫秒）。 */
+    public int transferTokenWaitMs = 1000;
 
     /** Mojang 会话服务器不可达/报错时，把玩家按离线身份放行（否则会拒绝登录）。 */
     public boolean fallbackToOfflineWhenAuthServerDown = true;
@@ -46,9 +59,9 @@ public final class Config {
     public int passwordMaxLength = 64;
     public int passwordIterations = 120000;
 
-    /** 未登录超时（秒），<=0 表示不超时。 */
+    /** 登录对话框超时（秒），<=0 表示不超时。 */
     public int loginTimeoutSeconds = 120;
-    /** 超时后踢出（false = 切换旁观者模式继续等待）。 */
+    /** 超时后踢出；false = 不超时，保留对话框继续等待（会一直占用这条连接）。 */
     public boolean kickOnTimeout = true;
 
     /** 连续密码错误达到该次数后临时封禁 IP。 */
@@ -63,20 +76,8 @@ public final class Config {
     /** 账号临时锁定秒数（0 = 关闭账号锁定）。 */
     public int accountLockSeconds = 300;
 
-    /** 备份重连必须携带服务器下发的一次性 Cookie 凭据（防止同名额领正版 UUID）。 */
-    public boolean backupRequireCookie = true;
-    /** 等待客户端返回备份 Cookie 的最长时间（毫秒）。 */
-    public int backupTokenWaitMs = 1500;
-    /** 备份凭据同时绑定发放时的 IP（IP 变化需重新 /login，多见于手机热点）。 */
-    public boolean backupTokenBindIp = true;
-
     /** 登录线程最多等待离线皮肤查询的毫秒数；超时本次登录先不带皮肤（后台继续补缓存）。 */
     public int offlineSkinMaxWaitMs = 3000;
-
-    /** 未登录时给予失明效果，避免看到服务器内部。 */
-    public boolean blindness = true;
-    /** 未登录时冻结移动。 */
-    public boolean freezeMovement = true;
 
     /** zh_cn / en_us */
     public String language = "zh_cn";
@@ -133,13 +134,19 @@ public final class Config {
         passwordMinLength = Math.max(1, Math.min(passwordMinLength, 128));
         passwordMaxLength = Math.max(passwordMinLength, Math.min(passwordMaxLength, 256));
         passwordIterations = Math.max(10000, Math.min(passwordIterations, 2000000));
+        if (transferHost == null) {
+            transferHost = "";
+        }
+        transferHost = transferHost.trim();
+        transferPort = Math.max(0, Math.min(transferPort, 65535));
+        transferTokenSeconds = Math.max(10, Math.min(transferTokenSeconds, 600));
+        transferTokenWaitMs = Math.max(200, Math.min(transferTokenWaitMs, 5000));
         loginTimeoutSeconds = Math.max(0, Math.min(loginTimeoutSeconds, 86400));
         maxLoginAttempts = Math.max(1, Math.min(maxLoginAttempts, 100));
         ipBanSeconds = Math.max(0, Math.min(ipBanSeconds, 30 * 86400));
         failureWindowSeconds = Math.max(60, Math.min(failureWindowSeconds, 7 * 86400));
         maxAccountFailures = Math.max(1, Math.min(maxAccountFailures, 1000));
         accountLockSeconds = Math.max(0, Math.min(accountLockSeconds, 86400));
-        backupTokenWaitMs = Math.max(200, Math.min(backupTokenWaitMs, 10000));
         offlineSkinMaxWaitMs = Math.max(0, Math.min(offlineSkinMaxWaitMs, 10000));
         if (language == null || language.isBlank()) {
             language = "zh_cn";

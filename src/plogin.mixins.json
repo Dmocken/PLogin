@@ -5,19 +5,15 @@
   "compatibilityLevel": "JAVA_21",
   "server": [
     "LoginThreadMixin",
-    "LoginCookieMixin",
     "LoginHelloMixin",
-    "PlayerListMixin",
-    "PlayerInfoFilterMixin",
-    "QuitMessageMixin",
-    "ServerPlayerGuardMixin",
-    "LivingEntityGuardMixin",
-    "KillCommandGuardMixin",
-    "TeleportCommandGuardMixin",
-    "ConnectionMixin",
-    "CommandsMixin",
-    "ServerGamePacketListenerChatMixin",
-    "DedicatedServerMixin"
+    "LoginCookieMixin",
+    "DedicatedServerMixin",
+    "ServerHandshakePacketListenerImplMixin",
+    "ServerLoginPacketListenerAccessor",
+    "ServerCommonPacketListenerAccessor",
+    "ServerCommonPacketListenerMixin",
+    "ServerConfigurationPacketListenerImplMixin",
+    "ServerGamePacketListenerImplMixin"
   ],
   "injectors": {
     "defaultRequire": 1
