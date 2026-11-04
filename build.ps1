@@ -26,7 +26,7 @@ if (-not (Test-Path $serverJar)) {
 Write-Host "[1/4] 依赖目录: $mc"
 
 $outDir = Join-Path $PWD 'build/classes'
-$jarPath = Join-Path $PWD 'build/plogin-1.0.0.jar'
+$jarPath = Join-Path $PWD 'build/plogin-1.0.1.jar'
 Remove-Item $outDir -Recurse -Force -ErrorAction SilentlyContinue
 New-Item -ItemType Directory -Force -Path $outDir, (Join-Path $PWD 'build') | Out-Null
 

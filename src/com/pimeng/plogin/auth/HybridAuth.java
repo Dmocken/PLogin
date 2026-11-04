@@ -14,6 +14,9 @@ import java.net.InetAddress;
 import java.util.Map;
 import java.util.UUID;
 import net.minecraft.core.UUIDUtil;
+import net.minecraft.network.Connection;
+import net.minecraft.resources.Identifier;
+import net.minecraft.server.network.ServerLoginPacketListenerImpl;
 
 /**
  * 混合登录核心：先走原版 hasJoined 正版验证；失败（无会话 / 会话服务器不可用）
@@ -27,12 +30,19 @@ public final class HybridAuth {
     public static final String BACKUP_MARKER = "plogin:offline_backup";
     /** 备份密码已通过、重连切正版 UUID 的标记。 */
     public static final String VERIFIED_MARKER = "plogin:backup_verified";
+    /** 一次性重连凭据使用的原版 Cookie key。 */
+    public static final Identifier BACKUP_COOKIE_KEY = Identifier.fromNamespaceAndPath("plogin", "backup");
 
     private HybridAuth() {
     }
 
     public static ProfileResult verify(MinecraftSessionService service, String name, String digest, InetAddress address)
             throws AuthenticationUnavailableException {
+        return verify(service, name, digest, address, null);
+    }
+
+    public static ProfileResult verify(MinecraftSessionService service, String name, String digest, InetAddress address,
+            byte[] backupCookie) throws AuthenticationUnavailableException {
         Config config = PLogin.config();
         if (config == null || !config.enabled) {
             // 总开关关闭：完全恢复原版行为
@@ -61,7 +71,8 @@ public final class HybridAuth {
         }
         GameProfile offlineProfile = UUIDUtil.createOfflineProfile(name);
         // 离线玩家皮肤：Mojang 正版名 -> signed textures；否则 LittleSkin -> MineSkin 签名。
-        offlineProfile = SkinService.applyOfflineSkin(offlineProfile);
+        // 有界异步：只等待缓存命中或限时窗口，慢的第三方皮肤 API 不再拖死整个登录线程。
+        offlineProfile = SkinService.applyOfflineSkin(offlineProfile, config.offlineSkinMaxWaitMs);
 
         // 有离线备份密码：
         // - 还没通过密码验证：保持离线 UUID，避免同 UUID 被原版 PlayerList 提前踢掉正版玩家；
@@ -71,7 +82,10 @@ public final class HybridAuth {
             try {
                 UUID premiumId = UUID.fromString(record.uuid);
                 String ip = address == null ? "" : address.getHostAddress();
-                if (BackupVerification.consume(name, ip)) {
+                if (backupCookie == null) {
+                    PLogin.LOGGER.info("[PLogin] 备份重连 {} 未携带 Cookie 凭据，只能停留待验证状态", name);
+                }
+                if (BackupVerification.consume(name, ip, backupCookie, config.backupTokenBindIp)) {
                     offlineProfile = withMarker(premiumId, name, offlineProfile.properties(), VERIFIED_MARKER);
                     PLogin.LOGGER.info("[PLogin] 备份验证成功重连: {} 使用正版 UUID {}（与正版存档共用）", name, premiumId);
                 } else {
@@ -84,6 +98,22 @@ public final class HybridAuth {
             }
         }
         return new ProfileResult(offlineProfile);
+    }
+
+    /**
+     * 在正版验证（hasJoined）之前向客户端索要备份重连凭据。仅对有离线备份的账号发送，
+     * 其余登录保持零额外往返。返回 null 表示没有凭据（正常登录 / 客户端没带 / 超时）。
+     */
+    public static byte[] requestBackupCookie(ServerLoginPacketListenerImpl listener, String name, Config config) {
+        if (config == null || !config.enabled || !config.backupRequireCookie) {
+            return null;
+        }
+        UserStore users = PLogin.users();
+        if (users == null || users.isCorrupted() || listener == null || !users.hasPremiumBackup(name)) {
+            return null;
+        }
+        Connection connection = BackupLoginState.connectionOf(listener);
+        return BackupLoginState.requestAndWait(connection, config.backupTokenWaitMs);
     }
 
     private static GameProfile withMarker(UUID id, String name, PropertyMap properties, String marker) {

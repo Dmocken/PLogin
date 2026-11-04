@@ -1,6 +1,7 @@
 package com.pimeng.plogin.auth;
 
 import com.mojang.authlib.GameProfile;
+import net.minecraft.network.protocol.common.ClientboundStoreCookiePacket;
 import com.pimeng.plogin.Messages;
 import com.pimeng.plogin.PLogin;
 import com.pimeng.plogin.config.Config;
@@ -71,6 +72,13 @@ public final class AuthManager {
     private final Map<UUID, Session> sessions = new ConcurrentHashMap<>();
     private final Map<String, Long> ipBans = new ConcurrentHashMap<>();
 
+    /** 跨连接的失败计数（key -> [count, lastFailureAt]，窗口过期清零，重连不会重置）。 */
+    private final Map<String, long[]> failuresByIp = new ConcurrentHashMap<>();
+    private final Map<String, long[]> failuresByAccount = new ConcurrentHashMap<>();
+    /** 账号级临时锁定（爆破防护），到期自动解锁。 */
+    private final Map<String, Long> accountLocks = new ConcurrentHashMap<>();
+    private long lastFailureSweep;
+
     public void onJoin(ServerPlayer player) {
         Config config = PLogin.config();
         if (config == null || !config.enabled) {
@@ -98,6 +106,24 @@ public final class AuthManager {
         boolean backupLogin = HybridAuth.isBackupLogin(profile);
         boolean verifiedBackup = HybridAuth.isVerifiedBackup(profile);
         boolean treatOffline = offline || backupLogin;
+
+        // 账号数据损坏：默认拒绝认证，不给“空账号库上重新注册/抢注”的机会。
+        // 正版验证通过的玩家不依赖本服账号数据，仍可正常进入。
+        if (PLogin.users() != null && PLogin.users().isCorrupted() && (treatOffline || verifiedBackup)) {
+            PLogin.LOGGER.error("[PLogin] 账号数据损坏，拒绝 {} 的离线认证流程", name);
+            disconnect(player, Messages.get("auth.corrupt"));
+            return;
+        }
+
+        // 账号级锁定（跨连接爆破防护）：重连拿不到新的尝试次数。
+        Long lockedUntil = accountLocks.get(toKey(name));
+        if (lockedUntil != null) {
+            if (lockedUntil > now) {
+                disconnect(player, Messages.get("login.account_locked", (lockedUntil - now + 999) / 1000));
+                return;
+            }
+            accountLocks.remove(toKey(name));
+        }
 
         if (verifiedBackup) {
             UserRecord record = PLogin.users().find(name);
@@ -233,6 +259,7 @@ public final class AuthManager {
         if (!ipBans.isEmpty()) {
             ipBans.entrySet().removeIf(entry -> entry.getValue() <= now);
         }
+        sweepFailureTracking();
         if (sessions.isEmpty()) {
             return;
         }
@@ -355,6 +382,10 @@ public final class AuthManager {
         if (config == null) {
             return;
         }
+        if (PLogin.users() != null && PLogin.users().isCorrupted()) {
+            player.sendSystemMessage(Messages.get("auth.corrupt"));
+            return;
+        }
         boolean offlineProfile = HybridAuth.isOfflineProfile(player.getGameProfile());
         UUID uuid = player.getUUID();
         Session session = sessions.get(uuid);
@@ -426,9 +457,10 @@ public final class AuthManager {
                 long now = System.currentTimeMillis();
                 UserRecord record = new UserRecord(name, player.getGameProfile().id().toString(), salt, hash,
                         iterations, now, now, ip);
+                boolean duplicate = PLogin.users().find(name) != null;
                 if (!PLogin.users().register(record)) {
                     session.busy = false;
-                    player.sendSystemMessage(Messages.get("register.exists"));
+                    player.sendSystemMessage(Messages.get(duplicate ? "register.exists" : "register.save_failed"));
                     return;
                 }
                 PLogin.LOGGER.info("[PLogin] 玩家 {} 注册成功", name);
@@ -479,8 +511,12 @@ public final class AuthManager {
                     return;
                 }
                 long now = System.currentTimeMillis();
-                PLogin.users().setPremiumBackup(name, premiumUuid.toString(), offlineUuid.toString(),
+                boolean saved = PLogin.users().setPremiumBackup(name, premiumUuid.toString(), offlineUuid.toString(),
                         salt, hash, iterations, now, ip);
+                if (!saved) {
+                    player.sendSystemMessage(Messages.get("register.save_failed"));
+                    return;
+                }
                 player.sendSystemMessage(Messages.get(hadBackup ? "premium.password_updated" : "premium.password_set"));
                 PLogin.LOGGER.info("[PLogin] 正版玩家 {} 设置了离线备份密码（正版 UUID {} / 离线 UUID {}）",
                         name, premiumUuid, offlineUuid);
@@ -490,6 +526,10 @@ public final class AuthManager {
 
     public void requestLogin(ServerPlayer player, String password) {
         Config config = PLogin.config();
+        if (PLogin.users() != null && PLogin.users().isCorrupted()) {
+            player.sendSystemMessage(Messages.get("auth.corrupt"));
+            return;
+        }
         UUID uuid = player.getUUID();
         Session session = sessions.get(uuid);
         // 离线备份登录使用正版 UUID，但会带 plogin:offline_backup 标记并创建 PENDING_LOGIN session；
@@ -550,9 +590,17 @@ public final class AuthManager {
                             disconnect(other, Messages.get("premium.backup.kick_premium"));
                         }
                     }
-                    BackupVerification.mark(name, ip);
+                    // 发放与连接绑定的一次性重连凭据（Cookie 下发给客户端，
+                    // 同名的其他连接没有凭据就不能顶替消费）。
+                    byte[] secret = BackupVerification.issue(name, ip);
+                    if (secret == null) {
+                        player.sendSystemMessage(Messages.get("premium.backup.overloaded"));
+                        player.connection.disconnect(Messages.get("premium.backup.relogin"));
+                        return;
+                    }
+                    player.connection.send(new ClientboundStoreCookiePacket(HybridAuth.BACKUP_COOKIE_KEY, secret));
                     PLogin.users().touchLogin(name, ip);
-                    PLogin.LOGGER.info("[PLogin] {} 备份密码验证成功，正版同名已下线；断开等待重连切换正版 UUID", name);
+                    PLogin.LOGGER.info("[PLogin] {} 备份密码验证成功，正版同名已下线；断开等待重连（凭据经 Cookie 下发）", name);
                     player.connection.disconnect(Messages.get("premium.backup.relogin"));
                     return;
                 }
@@ -564,6 +612,10 @@ public final class AuthManager {
 
     public void requestLogout(ServerPlayer player) {
         Config config = PLogin.config();
+        if (PLogin.users() != null && PLogin.users().isCorrupted()) {
+            player.sendSystemMessage(Messages.get("auth.corrupt"));
+            return;
+        }
         if (config != null && config.premiumBypass && !HybridAuth.isOfflineProfile(player.getGameProfile())) {
             player.sendSystemMessage(Messages.get("logout.premium"));
             return;
@@ -588,6 +640,10 @@ public final class AuthManager {
 
     public void requestChangePassword(ServerPlayer player, String oldPassword, String newPassword) {
         Config config = PLogin.config();
+        if (PLogin.users() != null && PLogin.users().isCorrupted()) {
+            player.sendSystemMessage(Messages.get("auth.corrupt"));
+            return;
+        }
         if (config != null && config.premiumBypass && !HybridAuth.isOfflineProfile(player.getGameProfile())) {
             player.sendSystemMessage(Messages.get("changepw.premium"));
             return;
@@ -620,7 +676,10 @@ public final class AuthManager {
                 if (server.getPlayerList().getPlayer(uuid) != player) {
                     return;
                 }
-                PLogin.users().setPassword(player.getGameProfile().name(), salt, hash, iterations);
+                if (!PLogin.users().setPassword(player.getGameProfile().name(), salt, hash, iterations)) {
+                    player.sendSystemMessage(Messages.get("register.save_failed"));
+                    return;
+                }
                 player.sendSystemMessage(Messages.get("changepw.ok"));
             });
         });
@@ -630,6 +689,10 @@ public final class AuthManager {
      * 管理员注销/重置后，把在线玩家重新拉回"未注册"状态。
      */
     public void forceState(ServerPlayer player, State state) {
+        if (PLogin.users() != null && PLogin.users().isCorrupted()) {
+            player.sendSystemMessage(Messages.get("auth.corrupt"));
+            return;
+        }
         sessions.remove(player.getUUID());
         Config config = PLogin.config();
         Session session = new Session(player, state, config != null && config.freezeMovement);
@@ -659,6 +722,19 @@ public final class AuthManager {
         PLogin.LOGGER.info("[PLogin] 玩家 {} 已登录（{}），uuid={}", player.getGameProfile().name(), how, player.getUUID());
     }
 
+    /** 记录一次失败到跨连接计数器；返回窗口内的累计次数。 */
+    private long bumpFailure(Map<String, long[]> map, String key, long now, long windowMs) {
+        long[] counters = map.get(key);
+        if (counters == null) {
+            counters = new long[2];
+            map.put(key, counters);
+        } else if (now - counters[1] > windowMs) {
+            counters[0] = 0; // 窗口过期重新计数
+        }
+        counters[1] = now;
+        return ++counters[0];
+    }
+
     private void recordFailure(ServerPlayer player, Session session) {
         Config config = PLogin.config();
         if (config == null) {
@@ -666,17 +742,56 @@ public final class AuthManager {
         }
         session.busy = false;
         session.attempts++;
-        if (session.attempts >= config.maxLoginAttempts) {
-            if (config.ipBanSeconds > 0) {
-                ipBans.put(session.ip, System.currentTimeMillis() + config.ipBanSeconds * 1000L);
-            }
+        long now = System.currentTimeMillis();
+        long windowMs = Math.max(60, config.failureWindowSeconds) * 1000L;
+        String name = toKey(player.getGameProfile().name());
+
+        // 1) IP 维度：与旧行为一致（单会话达到阈值时封禁）
+        long ipFailures = session.ip.isEmpty() ? 0 : bumpFailure(failuresByIp, session.ip, now, windowMs);
+        if (config.ipBanSeconds > 0 && ipFailures >= config.maxLoginAttempts) {
+            ipBans.put(session.ip, now + config.ipBanSeconds * 1000L);
             sessions.remove(player.getUUID());
-            PLogin.LOGGER.warn("[PLogin] 玩家 {} 密码错误次数过多，封禁 IP {} {} 秒",
-                    player.getGameProfile().name(), session.ip, config.ipBanSeconds);
+            PLogin.LOGGER.warn("[PLogin] IP {} 在窗口内累计 {} 次密码错误，临时封禁 {} 秒",
+                    session.ip, ipFailures, config.ipBanSeconds);
             disconnect(player, Messages.get("login.banned", config.ipBanSeconds));
             return;
         }
-        player.sendSystemMessage(Messages.get("login.wrong", config.maxLoginAttempts - session.attempts));
+
+        // 2) 账号维度：跨连接累计，重连换新 Session 不能重置。
+        long accountFailures = bumpFailure(failuresByAccount, name, now, windowMs);
+        if (config.accountLockSeconds > 0 && accountFailures >= config.maxAccountFailures) {
+            accountLocks.put(name, now + config.accountLockSeconds * 1000L);
+            sessions.remove(player.getUUID());
+            PLogin.LOGGER.warn("[PLogin] 账号 {} 在窗口内累计 {} 次密码错误，临时锁定 {} 秒",
+                    name, accountFailures, config.accountLockSeconds);
+            disconnect(player, Messages.get("login.account_locked", config.accountLockSeconds));
+            return;
+        }
+
+        player.sendSystemMessage(Messages.get("login.wrong", Math.max(1, config.maxLoginAttempts - session.attempts)));
+    }
+
+    private static String toKey(String name) {
+        return name == null ? "" : name.toLowerCase(Locale.ROOT);
+    }
+
+    /** 定期清掉过期的失败计数/账号锁，避免长跑服缓慢积内存。 */
+    private void sweepFailureTracking() {
+        long now = System.currentTimeMillis();
+        if (now - lastFailureSweep < 30_000L) {
+            return;
+        }
+        lastFailureSweep = now;
+        long windowMs = Math.max(60, PLogin.config() == null ? 1800 : PLogin.config().failureWindowSeconds) * 1000L;
+        if (!failuresByIp.isEmpty()) {
+            failuresByIp.entrySet().removeIf(entry -> now - entry.getValue()[1] > windowMs);
+        }
+        if (!failuresByAccount.isEmpty()) {
+            failuresByAccount.entrySet().removeIf(entry -> now - entry.getValue()[1] > windowMs);
+        }
+        if (!accountLocks.isEmpty()) {
+            accountLocks.entrySet().removeIf(entry -> entry.getValue() <= now);
+        }
     }
 
     private void freeze(ServerPlayer player, Session session) {

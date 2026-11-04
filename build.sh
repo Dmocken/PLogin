@@ -15,7 +15,7 @@ fi
 MC_SERVER="${MC_SERVER:-$PWD/.mcserver}"
 
 OUT=build/classes
-JAR=build/plogin-1.0.0.jar
+JAR=build/plogin-1.0.1.jar
 
 if [ ! -f "$MC_SERVER/versions/26.2/server-26.2.jar" ]; then
   echo "找不到 $MC_SERVER/versions/26.2/server-26.2.jar" >&2

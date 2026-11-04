@@ -5,6 +5,7 @@
   "compatibilityLevel": "JAVA_21",
   "server": [
     "LoginThreadMixin",
+    "LoginCookieMixin",
     "LoginHelloMixin",
     "PlayerListMixin",
     "PlayerInfoFilterMixin",

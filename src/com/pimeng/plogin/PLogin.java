@@ -17,13 +17,15 @@ import org.slf4j.LoggerFactory;
  */
 public final class PLogin {
     public static final String MOD_ID = "plogin";
-    public static final String VERSION = "1.0.0";
+    public static final String VERSION = "1.0.1";
     public static final Logger LOGGER = LoggerFactory.getLogger("PLogin");
 
     private static Config config;
     private static UserStore users;
     private static AuthManager auth;
     private static ExecutorService executor;
+    /** 皮肤查询专用线程池：允许被慢速第三方 API 拖住，但绝不占用认证线程。 */
+    private static ExecutorService skinExecutor;
     private static Path dataDir;
     private static volatile MinecraftServer server;
 
@@ -36,10 +38,19 @@ public final class PLogin {
         Messages.setLanguage(config.language);
 
         users = new UserStore(dataDir);
-        users.load();
+        if (!users.load()) {
+            // 数据损坏时进入“默认拒绝认证”模式（见 UserStore.isCorrupted / AuthManager.onJoin）。
+            // 不让服务器崩溃，但不接受任何离线注册/登录。
+            LOGGER.error("[PLogin] 检测到损坏的账号数据文件，已启用保护模式：离线认证暂停");
+        }
 
         executor = Executors.newFixedThreadPool(2, runnable -> {
             Thread thread = new Thread(runnable, "PLogin-Auth");
+            thread.setDaemon(true);
+            return thread;
+        });
+        skinExecutor = Executors.newFixedThreadPool(2, runnable -> {
+            Thread thread = new Thread(runnable, "PLogin-Skin");
             thread.setDaemon(true);
             return thread;
         });
@@ -81,6 +92,9 @@ public final class PLogin {
     }
 
     public static void shutdown() {
+        if (skinExecutor != null) {
+            skinExecutor.shutdown();
+        }
         if (executor != null) {
             executor.shutdown();
             try {
@@ -108,6 +122,11 @@ public final class PLogin {
 
     public static ExecutorService executor() {
         return executor;
+    }
+
+    /** 皮肤后台查询线程池。慢第三方 API 允许在这里排队，认证线程不受牵连。 */
+    public static ExecutorService skinExecutor() {
+        return skinExecutor;
     }
 
     public static Path dataDir() {

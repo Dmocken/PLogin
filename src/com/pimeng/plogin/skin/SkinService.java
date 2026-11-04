@@ -22,7 +22,9 @@ import java.time.Duration;
 import java.util.Base64;
 import java.util.Locale;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeoutException;
 import net.minecraft.core.UUIDUtil;
 
 /**
@@ -45,6 +47,8 @@ public final class SkinService {
             .followRedirects(HttpClient.Redirect.NORMAL)
             .build();
     private static final Map<String, Cached> CACHE = new ConcurrentHashMap<>();
+    /** 同名皮肤查询的去重：登录线程只等待，查询在独立线程池里跑。 */
+    private static final Map<String, CompletableFuture<SkinData>> IN_FLIGHT = new ConcurrentHashMap<>();
     private static final Map<String, Cached> SIGNED_URL_CACHE = new ConcurrentHashMap<>();
     private static final Object MINESKIN_LOCK = new Object();
     private static final String USER_AGENT = "PLogin/1.0 (Minecraft hybrid auth)";
@@ -65,6 +69,16 @@ public final class SkinService {
      * 不能直接 put，必须构造一个新的可变 PropertyMap + 新 GameProfile。
      */
     public static GameProfile applyOfflineSkin(GameProfile profile) {
+        // 老签名（同步等待）：仅测试工具调用；线上登录走 applyOfflineSkin(profile, maxWaitMs)。
+        return applyOfflineSkin(profile, -1L);
+    }
+
+    /**
+     * 异步离线皮肤：登录线程最多等待 maxWaitMs（负数 = 无限制，纯同步）。
+     * 超时就先登录、不带皮肤，同时后台把缓存补上，下次登录即命中。
+     * 这避免 LittleSkin / MineSkin 变慢或排队时把认证线程拖到超时。
+     */
+    public static GameProfile applyOfflineSkin(GameProfile profile, long maxWaitMs) {
         Config config = PLogin.config();
         if (config == null || !config.enabled || !config.offlineSkinsEnabled) {
             return profile;
@@ -74,9 +88,13 @@ public final class SkinService {
             return profile;
         }
 
-        SkinData data = resolve(profile.name(), config, provider);
+        SkinData data = resolveBounded(profile.name(), config, provider, maxWaitMs);
         if (data == null || data.value() == null || data.value().isBlank()) {
-            PLogin.LOGGER.info("[PLogin] 离线皮肤: {} 未找到，使用默认皮肤", profile.name());
+            if (maxWaitMs >= 0) {
+                PLogin.LOGGER.info("[PLogin] 离线皮肤: {} 本次未就绪（先登录，后台继续补缓存）", profile.name());
+            } else {
+                PLogin.LOGGER.info("[PLogin] 离线皮肤: {} 未找到，使用默认皮肤", profile.name());
+            }
             return profile;
         }
         try {
@@ -97,6 +115,61 @@ public final class SkinService {
         } catch (Exception e) {
             PLogin.LOGGER.warn("[PLogin] 无法给 {} 应用离线皮肤", profile.name(), e);
             return profile;
+        }
+    }
+
+    /**
+     * 有界解析：先查内存缓存；未命中时把查询放到独立线程池（与登录验证线程隔离），
+     * 登录线程最多等待 maxWaitMs。同一名字的并发查询会被折叠成一次，
+     * 超时的那次查询继续后台执行并把缓存补好。
+     */
+    private static SkinData resolveBounded(String name, Config config, String provider, long maxWaitMs) {
+        String key = name.toLowerCase(Locale.ROOT);
+        Cached cached = CACHE.get(key);
+        long now = System.currentTimeMillis();
+        if (cached != null && cached.expiresAt() > now) {
+            return cached.data();
+        }
+
+        if (maxWaitMs < 0) {
+            // 旧行为：同步阻塞直到结果出现
+            return resolve(name, config, provider);
+        }
+        if (maxWaitMs == 0) {
+            return cached == null ? null : cached.data();
+        }
+        if (IN_FLIGHT.size() >= 64) {
+            PLogin.LOGGER.debug("[PLogin] 皮肤查询队列已满，{} 跳过本次皮肤", name);
+            return null;
+        }
+
+        long deadline = System.currentTimeMillis() + maxWaitMs;
+        CompletableFuture<SkinData> future;
+        while (true) {
+            future = IN_FLIGHT.get(key);
+            if (future != null) {
+                break;
+            }
+            CompletableFuture<SkinData> mine = CompletableFuture.supplyAsync(
+                    () -> resolve(name, config, provider), PLogin.skinExecutor());
+            CompletableFuture<SkinData> raced = IN_FLIGHT.putIfAbsent(key, mine);
+            if (raced == null) {
+                future = mine;
+                mine.whenComplete((result, error) -> IN_FLIGHT.remove(key, mine));
+                break;
+            }
+            future = raced;
+        }
+        try {
+            return future.get(Math.max(1, deadline - System.currentTimeMillis()), java.util.concurrent.TimeUnit.MILLISECONDS);
+        } catch (TimeoutException e) {
+            return null;
+        } catch (java.util.concurrent.ExecutionException e) {
+            PLogin.LOGGER.debug("[PLogin] {} 皮肤查询异常", name, e.getCause());
+            return null;
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            return null;
         }
     }
 

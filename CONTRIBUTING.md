@@ -39,7 +39,7 @@
 ```bash
 # 指向一个已安装好 Fabric + Fabric API 的服务端目录
 MC_SERVER=/path/to/minecraft-server ./build.sh
-# 产物：build/plogin-1.0.0.jar
+# 产物：build/plogin-1.0.1.jar
 ```
 
 Windows 用等价脚本：

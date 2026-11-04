@@ -56,6 +56,11 @@ public final class Messages {
         ZH.put("login.already", "§7你已经登录过了。");
         ZH.put("login.busy", "§7正在验证密码，请稍候...");
         ZH.put("login.banned", "§c密码错误次数过多，IP 已被临时封禁 %d 秒。");
+        ZH.put("login.account_locked", "§c该账号因多次密码错误被临时锁定，请 %d 秒后再试。");
+        ZH.put("register.save_failed", "§c保存账号数据失败，请稍后重试；若持续失败请联系管理员。");
+        ZH.put("auth.corrupt", "§c账号数据文件损坏，服务器已停用离线注册/登录，请联系管理员修复后重启。");
+        ZH.put("premium.backup.overloaded", "§c当前待验证重连请求过多，请稍后重新 §e/login§c。");
+        ZH.put("premium.backup.no_cookie", "§c重连凭据验证失败，请重新执行 §e/login <密码>§c。");
         ZH.put("ip.banned", "§c你的 IP 因多次登录失败被临时封禁，剩余 %d 秒。");
         ZH.put("timeout", "§c登录超时，已断开连接。");
         ZH.put("timeout.spectator", "§7登录超时，已切换为旁观者模式；随时可以 /login 或 /register。");
@@ -123,6 +128,11 @@ public final class Messages {
         EN.put("login.already", "§7You are already logged in.");
         EN.put("login.busy", "§7Verifying password, please wait...");
         EN.put("login.banned", "§cToo many failures. IP is banned for %d seconds.");
+        EN.put("login.account_locked", "§cThis account is temporarily locked after repeated wrong passwords. Try again in %d seconds.");
+        EN.put("register.save_failed", "§cFailed to save account data. Try again later; contact an admin if it persists.");
+        EN.put("auth.corrupt", "§cAccount data file is corrupted; offline registration and login are disabled. Contact an admin.");
+        EN.put("premium.backup.overloaded", "§cToo many pending reconnections. Please run §e/login§c again shortly.");
+        EN.put("premium.backup.no_cookie", "§cReconnection credential check failed. Please run §e/login <password>§c again.");
         EN.put("ip.banned", "§cYour IP is temporarily banned for %d more seconds.");
         EN.put("timeout", "§cLogin timed out.");
         EN.put("timeout.spectator", "§7Login timed out; switched to spectator. You can still /login or /register.");

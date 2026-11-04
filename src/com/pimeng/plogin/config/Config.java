@@ -56,6 +56,23 @@ public final class Config {
     /** IP 临时封禁秒数。 */
     public int ipBanSeconds = 300;
 
+    /** 失败计数窗口（秒）：窗口内跨连接累计的表现才参与账号锁定判断，窗口过期清零。 */
+    public int failureWindowSeconds = 1800;
+    /** 窗口内该账号累计密码失败达到该次数后临时锁定账号（重连/换连接不会重置）。 */
+    public int maxAccountFailures = 15;
+    /** 账号临时锁定秒数（0 = 关闭账号锁定）。 */
+    public int accountLockSeconds = 300;
+
+    /** 备份重连必须携带服务器下发的一次性 Cookie 凭据（防止同名额领正版 UUID）。 */
+    public boolean backupRequireCookie = true;
+    /** 等待客户端返回备份 Cookie 的最长时间（毫秒）。 */
+    public int backupTokenWaitMs = 1500;
+    /** 备份凭据同时绑定发放时的 IP（IP 变化需重新 /login，多见于手机热点）。 */
+    public boolean backupTokenBindIp = true;
+
+    /** 登录线程最多等待离线皮肤查询的毫秒数；超时本次登录先不带皮肤（后台继续补缓存）。 */
+    public int offlineSkinMaxWaitMs = 3000;
+
     /** 未登录时给予失明效果，避免看到服务器内部。 */
     public boolean blindness = true;
     /** 未登录时冻结移动。 */
@@ -119,6 +136,11 @@ public final class Config {
         loginTimeoutSeconds = Math.max(0, Math.min(loginTimeoutSeconds, 86400));
         maxLoginAttempts = Math.max(1, Math.min(maxLoginAttempts, 100));
         ipBanSeconds = Math.max(0, Math.min(ipBanSeconds, 30 * 86400));
+        failureWindowSeconds = Math.max(60, Math.min(failureWindowSeconds, 7 * 86400));
+        maxAccountFailures = Math.max(1, Math.min(maxAccountFailures, 1000));
+        accountLockSeconds = Math.max(0, Math.min(accountLockSeconds, 86400));
+        backupTokenWaitMs = Math.max(200, Math.min(backupTokenWaitMs, 10000));
+        offlineSkinMaxWaitMs = Math.max(0, Math.min(offlineSkinMaxWaitMs, 10000));
         if (language == null || language.isBlank()) {
             language = "zh_cn";
         }
