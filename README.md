@@ -50,7 +50,7 @@ PLogin 把两条路合成一条：同一条登录流程里先做正版验证，�
 | Minecraft | 26.2 |
 | Fabric Loader | 0.19.5 或更高 |
 | Fabric API | 对应 26.2 的版本，放在 `mods/` |
-| Java | 21 或更高（建议与服务器现有版本一致） |
+| Java | 25（Minecraft 26.2 的最低要求） |
 
 ### 2. 安装
 
@@ -217,15 +217,23 @@ PLogin 会改变服务器的安全边界，上线前请确认这几点：
 
 ## 构建
 
+仓库不附带 Minecraft 服务端 jar（Mojang 版权产物）。一条命令就能把 26.2 的依赖全部拉下来并编译：
+
 ```bash
-./build.sh
-# 产物：build/plogin-1.0.0.jar
+./scripts/fetch-deps.sh --build      # Linux / macOS
 ```
 
-需要一个已安装好的 Minecraft 26.2 服务端目录作为依赖来源，详见
-[技术文档 §4](docs/TECHNICAL.md#4-构建) 和 [CONTRIBUTING.md](CONTRIBUTING.md)。
+```powershell
+.\scripts\fetch-deps.ps1 -Build      # Windows
+```
 
-仓库**不包含** Minecraft 服务端 jar（Mojang 版权产物），请自行下载对应版本。
+脚本会自动完成：解析 Mojang 版本元数据 → 下载服务端 bundler 并解出内层 jar → 下载 131 个库 →
+解析 Fabric Loader 与 Fabric API 版本 → 拆分 Fabric API 的嵌套模块 → 调用构建。
+
+产物：`build/plogin-1.0.0.jar`，依赖落在 `.mcserver/`（不进入版本库）。
+
+已经装好服务端、只想编译的话，直接用 `./build.sh` 或 `.\build.ps1`，
+用 `MC_SERVER` 指向服务端目录即可。细节见[技术文档 §4](docs/TECHNICAL.md#4-构建)。
 
 ---
 
@@ -235,6 +243,7 @@ PLogin 会改变服务器的安全边界，上线前请确认这几点：
 |---|---|
 | [docs/TECHNICAL.md](docs/TECHNICAL.md) | 实现原理、Mixin 清单、认证状态机、数据格式、实测记录 |
 | [docs/文案.md](docs/文案.md) | 宣传文案、玩家提示、开服公告模板、命令说明 |
+| [scripts/fetch-deps.sh](scripts/fetch-deps.sh) / [.ps1](scripts/fetch-deps.ps1) | 一键拉取 26.2 依赖并构建 |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | 开发环境、代码结构、提交规范 |
 | [SECURITY.md](SECURITY.md) | 安全问题反馈方式 |
 | [CHANGELOG.md](CHANGELOG.md) | 版本变更记录 |

@@ -3,7 +3,7 @@
 > 面向开发者与高级运维：记录登录流程改造、Mixin 清单、认证状态机、皮肤注入、数据格式与实测结论。
 > 只想把模组装到服务器上的服主，请先读 [README](../README.md)。
 
-**环境基线**：Minecraft 26.2 · Fabric Loader 0.19.5 · Fabric API · Java 21+（开发环境为 Java 27）
+**环境基线**：Minecraft 26.2 · Fabric Loader 0.19.5+ · Fabric API · Java 25
 
 > 配套文案（宣传语、玩家提示、公告模板、命令说明）：[文案.md](文案.md)
 
@@ -416,11 +416,27 @@ PLogin/
 
 ## 4. 构建
 
-环境：Java 21+，Minecraft 26.2 服务端 jar（Mojang mappings），Fabric API。
+环境：Java 25（Minecraft 26.2 的最低要求），Minecraft 26.2 服务端 jar（Mojang mappings），Fabric API。
 
 ```bash
-./build.sh
-# 产物：build/plogin-1.0.0.jar
+./build.sh        # Linux / macOS
+```
+
+```powershell
+.\build.ps1       # Windows
+```
+
+产物：`build/plogin-1.0.0.jar`
+
+首次构建可以直接跑一键脚本，它会下载 26.2 服务端 jar、131 个 Mojang 库、Fabric Loader 与 Fabric API
+到 `.mcserver/`，并拆分 Fabric API 的嵌套模块，然后自动调用构建：
+
+```bash
+./scripts/fetch-deps.sh --build
+```
+
+```powershell
+.\scripts\fetch-deps.ps1 -Build
 ```
 
 `build.sh` 需要一个「已安装好的服务端目录」（下称 `MC_SERVER`），从中取：

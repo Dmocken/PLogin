@@ -20,3 +20,6 @@
 - 防爆破：PBKDF2-HMAC-SHA256 加盐、失败计数与 IP 临时封禁、认证命令忙碌标记。
 - 中英双语提示，可通过配置切换。
 - 无 Gradle 的 `javac` 构建脚本，直接对着服务端 jar 编译。
+- Windows 版构建脚本 `build.ps1`，与 `build.sh` 行为一致。
+- 一键依赖脚本 `scripts/fetch-deps.sh` / `scripts/fetch-deps.ps1`：自动下载 26.2 服务端 jar、Mojang 库、Fabric Loader 与 Fabric API，拆分 Fabric API 的嵌套模块，可加 `--build` / `-Build` 直接编译。
+- 构建脚本支持自动探测 `MC_SERVER`（`MC_SERVER` 环境变量、`.mcserver/`、`../minecraft-bingo`、`$HOME/mc/minecraft-bingo`）。

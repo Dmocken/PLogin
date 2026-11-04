@@ -10,7 +10,7 @@
 
 | 项目 | 要求 |
 |---|---|
-| JDK | 21 或更高（开发环境使用 Java 27） |
+| JDK | 25（Minecraft 26.2 的最低要求） |
 | Minecraft | 26.2 服务端 jar（Mojang 官方名，非 intermediary） |
 | Fabric Loader | 0.19.5 或更高 |
 | Fabric API | 对应 26.2 的版本 |
@@ -21,13 +21,35 @@
 
 ## 构建
 
+第一次构建，让脚本自己把依赖拉全（推荐）：
+
+```bash
+./scripts/fetch-deps.sh --build      # Linux / macOS，需要 bash + curl + python3
+```
+
+```powershell
+.\scripts\fetch-deps.ps1 -Build      # Windows
+```
+
+它会下载深 26.2 的服务端 jar、131 个库、Fabric Loader 与 Fabric API 到 `.mcserver/`，
+拆分 Fabric API 的嵌套模块，然后调用下面的构建脚本。
+
+已经有服务端目录时，直接构建：
+
 ```bash
 # 指向一个已安装好 Fabric + Fabric API 的服务端目录
 MC_SERVER=/path/to/minecraft-server ./build.sh
 # 产物：build/plogin-1.0.0.jar
 ```
 
-未设置 `MC_SERVER` 时，脚本会依次尝试仓库下的 `.mcserver/`、`../minecraft-bingo`、
+Windows 用等价脚本：
+
+```powershell
+$env:MC_SERVER = 'D:\path\to\minecraft-server'
+.\build.ps1
+```
+
+未设置 `MC_SERVER` 时，两个脚本都会依次尝试仓库下的 `.mcserver/`、`../minecraft-bingo`、
 `$HOME/mc/minecraft-bingo`。
 
 目录需要包含：
@@ -38,6 +60,10 @@ MC_SERVER=/path/to/minecraft-server ./build.sh
 - `libraries/**/*.jar`
 
 > 请**不要**把服务端 jar、日志、世界存档提交进仓库，`.gitignore` 已经排除了这些路径。
+
+> Fabric API 的发布 jar 是个 bundle，模块以嵌套 jar 形式放在 `META-INF/jars/` 里。
+> 首次编译前需要把它们解压到 `.fabric/processedMods/`，否则 javac 找不到
+> `net.fabricmc.fabric.api.*`（实际运行服务端时 Fabric Loader 会自动做这件事）。
 
 ## 代码结构
 
