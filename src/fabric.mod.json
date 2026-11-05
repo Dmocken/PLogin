@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "id": "plogin",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "name": "PLogin Hybrid Authentication",
   "description": "Hybrid (premium + offline) login for Minecraft 26.2 servers: keeps online-mode=true, lets cracked players join with offline UUIDs, and asks them to register/login with an in-Configuration dialog before they enter the world. No limbo world, no client mod required.",
   "authors": ["Pimeng"],

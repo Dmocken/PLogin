@@ -35,7 +35,7 @@
 
 | 项目 | 结果 |
 |---|---|
-| 模组版本 | PLogin 1.1.0（Minecraft 26.2 / Fabric Loader 0.19.5 / Java 25） |
+| 模组版本 | PLogin 1.1.1（Minecraft 26.2 / Fabric Loader 0.19.5 / Java 25） |
 | 正版 UUID | ✅ 通过本地伪装会话服务器实测：UUID = `Mojang hasJoined 返回值` |
 | 正版皮肤属性 | ✅ `textures` 属性随 LoginFinished 下发 |
 | 正版跳过验证 | ✅ 直接进入；不弹对话框 |
@@ -400,7 +400,7 @@ PLogin/
 │       ├── mixin/  (8 个 Mixin/Accessor)
 │       └── util/Ui.java
 └── build/                          ← 构建产物（不入库）
-    ├── plogin-1.1.0.jar
+    ├── plogin-1.1.1.jar
     └── classes/
 ```
 
@@ -418,7 +418,7 @@ PLogin/
 .\build.ps1       # Windows
 ```
 
-产物：`build/plogin-1.1.0.jar`
+产物：`build/plogin-1.1.1.jar`
 
 首次构建可以直接跑一键脚本，它会下载 26.2 服务端 jar、131 个 Mojang 库、Fabric Loader 与 Fabric API
 到 `.mcserver/`，并拆分 Fabric API 的嵌套模块，然后自动调用构建：
@@ -455,7 +455,7 @@ MC_SERVER=/path/to/minecraft-server ./build.sh
 
 1. **服务端**：
    - Fabric Loader >= 0.19.5，Fabric API；
-   - 把 `build/plogin-1.1.0.jar` 放进 `mods/`；
+   - 把 `build/plogin-1.1.1.jar` 放进 `mods/`；
    - `server.properties` 保持 `online-mode=true`（混合登录的前提）。
 2. **客户端**：什么都不用装。正版客户端直接连；离线启动器客户端也能连，并在配置阶段看到对话框。
 3. **备份密码 transfer 需要**：
@@ -470,7 +470,7 @@ MC_SERVER=/path/to/minecraft-server ./build.sh
 5. 重启服务器，日志应出现：
 
 ```text
-   [PLogin] 已加载 v1.1.0，数据目录：./config/plogin
+   [PLogin] 已加载 v1.1.1，数据目录：./config/plogin
    [PLogin] 混合登录已启用（online-mode=true）：正版玩家验证后直接进入，离线玩家在配置阶段通过对话框注册/登录
 ```
 

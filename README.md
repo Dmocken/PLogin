@@ -55,7 +55,7 @@ PLogin 把两条路合成一条：同一条登录流程里先做正版验证，�
 
 ### 2. 安装
 
-把 `plogin-1.1.0.jar`（从仓库 Releases 下载，或按[构建](#构建)自行编译）放进服务器的 `mods/` 目录，
+把 `plogin-1.1.1.jar`（从仓库 Releases 下载，或按[构建](#构建)自行编译）放进服务器的 `mods/` 目录，
 和 `fabric-api-*.jar` 放在一起，然后重启。
 
 > 客户端什么都不用装。正版客户端直接连；离线启动器客户端也能连，并在配置阶段看到注册对话框。
@@ -73,7 +73,7 @@ PLogin 正是靠「先按正版验证、失败再按离线处理」来区分两�
 日志里应该出现：
 
 ```text
-[PLogin] 已加载 v1.1.0，数据目录：./config/plogin
+[PLogin] 已加载 v1.1.1，数据目录：./config/plogin
 [PLogin] 混合登录已启用（online-mode=true）：正版玩家验证后直接进入，离线玩家在配置阶段通过对话框注册/登录
 ```
 
@@ -282,7 +282,7 @@ PLogin 会改变服务器的安全边界，上线前请确认这几点：
 脚本会自动完成：解析 Mojang 版本元数据 → 下载服务端 bundler 并解出内层 jar → 下载 131 个库 →
 解析 Fabric Loader 与 Fabric API 版本 → 拆分 Fabric API 的嵌套模块 → 调用构建。
 
-产物：`build/plogin-1.1.0.jar`，依赖落在 `.mcserver/`（不进入版本库）。
+产物：`build/plogin-1.1.1.jar`，依赖落在 `.mcserver/`（不进入版本库）。
 
 已经装好服务端、只想编译的话，直接用 `./build.sh` 或 `.\build.ps1`，
 用 `MC_SERVER` 指向服务端目录即可。细节见[技术文档 §4](docs/TECHNICAL.md#4-构建)。
