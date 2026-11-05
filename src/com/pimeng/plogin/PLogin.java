@@ -56,7 +56,7 @@ public final class PLogin {
         });
 
         configAuth = new ConfigAuth();
-        LOGGER.info("PLogin {} 已加载，数据目录: {}", VERSION, dataDir);
+        LOGGER.info("[PLogin] 已加载 v{}，数据目录：{}", VERSION, dataDir);
     }
 
     public static void setServer(MinecraftServer minecraftServer) {
@@ -71,7 +71,7 @@ public final class PLogin {
             LOGGER.info("[PLogin] 服务器 online-mode=false：所有玩家都按离线身份处理，在配置阶段通过对话框注册/登录");
         }
         boolean effectiveSecureProfile = minecraftServer.enforceSecureProfile();
-        LOGGER.info("[PLogin] enforce-secure-profile 有效值: {}（配置 forceDisableSecureProfile={}）",
+        LOGGER.info("[PLogin] enforce-secure-profile 有效值：{}（配置 forceDisableSecureProfile={}）",
                 effectiveSecureProfile, config.forceDisableSecureProfile);
         if (effectiveSecureProfile) {
             LOGGER.warn("[PLogin] enforce-secure-profile 仍为 true，离线玩家可能无法发送聊天；"

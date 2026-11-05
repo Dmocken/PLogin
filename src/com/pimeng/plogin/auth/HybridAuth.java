@@ -52,7 +52,7 @@ public final class HybridAuth {
                 GameProfile profile = SkinService.applyOfflineSkin(
                         new GameProfile(pending.premiumUuid(), name), config.offlineSkinMaxWaitMs);
                 profile = withMarker(profile.id(), name, profile.properties(), TRANSFER_MARKER);
-                PLogin.LOGGER.info("[PLogin] transfer 凭据验证成功: {} -> 正版 UUID {}（使用正版存档）",
+                PLogin.LOGGER.info("[PLogin] transfer 凭据验证成功：{} → 正版 UUID {}（使用正版存档）",
                         name, pending.premiumUuid());
                 return new ProfileResult(profile);
             }
@@ -66,15 +66,15 @@ public final class HybridAuth {
             ProfileResult result = service.hasJoinedServer(name, digest, address);
             if (result != null) {
                 PLogin.users().rememberPremium(name, result.profile().id());
-                PLogin.LOGGER.info("[PLogin] 正版验证成功: {} -> {}", name, result.profile().id());
+                PLogin.LOGGER.info("[PLogin] 正版验证成功：{} → {}", name, result.profile().id());
                 return result;
             }
-            PLogin.LOGGER.info("[PLogin] {} 没有有效的正版会话，按离线玩家处理", name);
+            PLogin.LOGGER.info("[PLogin] 玩家 {} 没有有效的正版会话，按离线玩家处理", name);
         } catch (AuthenticationUnavailableException e) {
             if (!fallback) {
                 throw e;
             }
-            PLogin.LOGGER.warn("[PLogin] Mojang 会话服务器不可用，{} 按离线玩家放行（fallbackToOfflineWhenAuthServerDown=true）: {}",
+            PLogin.LOGGER.warn("[PLogin] Mojang 会话服务器不可用，{} 按离线玩家放行（fallbackToOfflineWhenAuthServerDown=true）：{}",
                     name, e.getMessage());
         } catch (RuntimeException e) {
             if (!fallback) {
@@ -92,7 +92,7 @@ public final class HybridAuth {
             // 只做标记，不改 UUID：这个连接从头到尾都是离线 UUID，
             // 密码在 Configuration 对话框里验证，通过后直接继续进入世界。
             offlineProfile = withMarker(offlineProfile.id(), name, offlineProfile.properties(), BACKUP_MARKER);
-            PLogin.LOGGER.info("[PLogin] 离线备份玩家: {} 使用离线 UUID {}（密码通过后直接进入，不切换正版 UUID）",
+            PLogin.LOGGER.info("[PLogin] 离线备份玩家：{} 使用离线 UUID {}（密码通过后直接进入，不切换正版 UUID）",
                     name, offlineProfile.id());
         }
         return new ProfileResult(offlineProfile);

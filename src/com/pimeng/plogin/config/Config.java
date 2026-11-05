@@ -125,7 +125,7 @@ public final class Config {
             Files.writeString(file, GSON.toJson(config), StandardCharsets.UTF_8);
             return config;
         } catch (Exception e) {
-            PLogin.LOGGER.error("[PLogin] 读取配置失败，使用默认配置: {}", file, e);
+            PLogin.LOGGER.error("[PLogin] 读取配置失败，使用默认配置：{}", file, e);
             return defaults;
         }
     }

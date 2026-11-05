@@ -24,6 +24,6 @@ public final class PLoginMod implements DedicatedServerModInitializer {
         ServerLifecycleEvents.SERVER_STARTED.register(PLogin::onServerStarted);
         ServerLifecycleEvents.SERVER_STOPPING.register(server -> PLogin.shutdown());
 
-        PLogin.LOGGER.info("PLogin {} 初始化完成", PLogin.VERSION);
+        PLogin.LOGGER.info("[PLogin] 初始化完成，版本 {}", PLogin.VERSION);
     }
 }

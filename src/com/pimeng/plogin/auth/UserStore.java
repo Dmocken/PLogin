@@ -59,8 +59,8 @@ public final class UserStore {
                 users.clear();
                 premiumNames.clear();
                 corrupted = true;
-                PLogin.LOGGER.error("[PLogin] 账号数据损坏（{} / {}）。已停用离线注册与登录，"
-                                + "请修复文件后重启服务器；正版验证不受影响。",
+                PLogin.LOGGER.error("[PLogin] 账号数据损坏（{} / {}），已停用离线注册与登录；"
+                                + "请修复文件后重启服务器（正版验证不受影响）",
                         usersFile.toAbsolutePath(), premiumNamesFile.toAbsolutePath());
                 return false;
             }

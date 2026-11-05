@@ -52,18 +52,40 @@ import net.minecraft.server.network.ServerConfigurationPacketListenerImpl;
  */
 public final class ConfigAuth {
     public enum State {
-        PENDING_REGISTER,
-        PENDING_LOGIN,
-        AUTHENTICATED
+        PENDING_REGISTER("待注册"),
+        PENDING_LOGIN("待登录"),
+        AUTHENTICATED("已认证");
+
+        private final String label;
+
+        State(String label) {
+            this.label = label;
+        }
+
+        /** 日志用的中文名称。 */
+        public String label() {
+            return label;
+        }
     }
 
     /** 登录成功后要补发的欢迎信息类型。 */
     private enum Welcome {
-        NONE,
-        PREMIUM,
-        BACKUP,
-        LOGIN,
-        REGISTER
+        NONE("无"),
+        PREMIUM("正版"),
+        BACKUP("离线备份"),
+        LOGIN("登录"),
+        REGISTER("注册");
+
+        private final String label;
+
+        Welcome(String label) {
+            this.label = label;
+        }
+
+        /** 日志用的中文名称。 */
+        String label() {
+            return label;
+        }
     }
 
     /** returnToWorld 的处理结果：挂任务 / 不处理 / 已断开（跳过原版后续流程）。 */
@@ -107,7 +129,7 @@ public final class ConfigAuth {
             return StartResult.skip();
         }
         if (consumeReconfiguring(connection)) {
-            PLogin.LOGGER.info("[PLogin] {} 重新进入配置阶段，跳过登录对话框",
+            PLogin.LOGGER.info("[PLogin] 玩家 {} 重新进入配置阶段，跳过登录对话框",
                     listener.getOwner().name());
             return StartResult.skip();
         }
@@ -188,7 +210,7 @@ public final class ConfigAuth {
             }
             users.touchLogin(name, ip);
             welcomes.put(profile.id(), Welcome.BACKUP);
-            PLogin.LOGGER.info("[PLogin] transfer 重连成功: {} ({})，使用正版 UUID/存档", name, profile.id());
+            PLogin.LOGGER.info("[PLogin] transfer 重连成功：{}（{}），使用正版 UUID/存档", name, profile.id());
             return StartResult.skip();
         }
 
@@ -208,7 +230,7 @@ public final class ConfigAuth {
                 }
             }
             welcomes.put(profile.id(), Welcome.PREMIUM);
-            PLogin.LOGGER.info("[PLogin] 正版玩家 {} ({}) 直接进入服务器", name, profile.id());
+            PLogin.LOGGER.info("[PLogin] 正版玩家 {}（{}）直接进入服务器", name, profile.id());
             return StartResult.skip();
         }
 
@@ -233,7 +255,7 @@ public final class ConfigAuth {
         if (config.premiumNameProtection) {
             UUID knownPremium = users.premiumUuid(name);
             if (knownPremium != null && !knownPremium.equals(profile.id()) && !hasBackup) {
-                PLogin.LOGGER.warn("[PLogin] 拒绝离线玩家 {} ({})：该名字属于正版账号 {}",
+                PLogin.LOGGER.warn("[PLogin] 拒绝离线玩家 {}（{}）：该名字属于正版账号 {}",
                         name, profile.id(), knownPremium);
                 disconnect(listener, Messages.get("premium.name"));
                 return StartResult.disconnected();
@@ -263,8 +285,8 @@ public final class ConfigAuth {
         State state = record == null ? State.PENDING_REGISTER : State.PENDING_LOGIN;
         Session session = new Session(listener, profile, ip, state);
         sessions.put(listener, session);
-        PLogin.LOGGER.info("[PLogin] 配置阶段认证: {} ({})，状态={}，IP={}",
-                name, profile.id(), state, ip);
+        PLogin.LOGGER.info("[PLogin] 配置阶段认证：{}（{}），状态={}，IP={}",
+                name, profile.id(), state.label(), ip);
         return StartResult.wait(new AuthConfigurationTask(session));
     }
 
@@ -684,7 +706,7 @@ public final class ConfigAuth {
                 try {
                     premiumUuid = UUID.fromString(record.uuid);
                 } catch (IllegalArgumentException e) {
-                    PLogin.LOGGER.warn("[PLogin] 离线备份记录中的正版 UUID 无效: {}", record.uuid);
+                    PLogin.LOGGER.warn("[PLogin] 离线备份记录中的正版 UUID 无效：{}", record.uuid);
                 }
                 if (premiumUuid != null) {
                     if (server.getPlayerList().getPlayer(premiumUuid) != null) {
@@ -852,7 +874,7 @@ public final class ConfigAuth {
             // 这里主动移出会话表，避免为每个进入世界的玩家残留一条 Session。
             sessions.remove(listener, this);
             sendClearDialog(listener);
-            PLogin.LOGGER.info("[PLogin] 玩家 {} 在配置阶段认证成功（{}）", name, kind);
+            PLogin.LOGGER.info("[PLogin] 玩家 {} 在配置阶段认证成功（{}）", name, kind.label());
         }
 
         /**
@@ -931,7 +953,7 @@ public final class ConfigAuth {
             if (server == null) {
                 return;
             }
-            PLogin.LOGGER.info("[PLogin] {} 备份密码验证成功，准备 transfer 到 {}:{}（正版 UUID）",
+            PLogin.LOGGER.info("[PLogin] 玩家 {} 备份密码验证成功，准备 transfer 到 {}:{}（正版 UUID）",
                     name, host, port);
             try {
                 CompletableFuture.delayedExecutor(50, TimeUnit.MILLISECONDS).execute(() -> {

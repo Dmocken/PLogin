@@ -91,9 +91,9 @@ public final class SkinService {
         SkinData data = resolveBounded(profile.name(), config, provider, maxWaitMs);
         if (data == null || data.value() == null || data.value().isBlank()) {
             if (maxWaitMs >= 0) {
-                PLogin.LOGGER.info("[PLogin] 离线皮肤: {} 本次未就绪（先登录，后台继续补缓存）", profile.name());
+                PLogin.LOGGER.info("[PLogin] 离线皮肤：{} 本次未就绪（先登录，后台继续补缓存）", profile.name());
             } else {
-                PLogin.LOGGER.info("[PLogin] 离线皮肤: {} 未找到，使用默认皮肤", profile.name());
+                PLogin.LOGGER.info("[PLogin] 离线皮肤：{} 未找到，使用默认皮肤", profile.name());
             }
             return profile;
         }
@@ -108,8 +108,8 @@ public final class SkinService {
                 propertyMap.put(entry.getKey(), entry.getValue());
             }
             propertyMap.put("textures", property);
-            PLogin.LOGGER.info("[PLogin] 离线皮肤: {} <- {} ({}, textures={})", profile.name(), data.source(),
-                    data.signature() == null || data.signature().isBlank() ? "unsigned" : "signed",
+            PLogin.LOGGER.info("[PLogin] 离线皮肤：{} ← {}（签名={}，textures={}）", profile.name(), data.source(),
+                    data.signature() == null || data.signature().isBlank() ? "未签名" : "已签名",
                     textureTypes(data.value()));
             return new GameProfile(profile.id(), profile.name(), new PropertyMap(propertyMap));
         } catch (Exception e) {
@@ -165,7 +165,7 @@ public final class SkinService {
         } catch (TimeoutException e) {
             return null;
         } catch (java.util.concurrent.ExecutionException e) {
-            PLogin.LOGGER.debug("[PLogin] {} 皮肤查询异常", name, e.getCause());
+            PLogin.LOGGER.debug("[PLogin] 查询 {} 的皮肤时异常", name, e.getCause());
             return null;
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
@@ -360,11 +360,11 @@ public final class SkinService {
                     return result;
                 }
             }
-            PLogin.LOGGER.warn("[PLogin] MineSkin 签名失败: HTTP {} {}", response.statusCode(), snippet(response.body()));
+            PLogin.LOGGER.warn("[PLogin] MineSkin 签名失败：HTTP {} {}", response.statusCode(), snippet(response.body()));
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         } catch (Exception e) {
-            PLogin.LOGGER.warn("[PLogin] MineSkin 请求异常: {}", e.toString());
+            PLogin.LOGGER.warn("[PLogin] MineSkin 请求异常：{}", e.toString());
         }
         return null;
     }
@@ -462,7 +462,7 @@ public final class SkinService {
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         } catch (Exception e) {
-            PLogin.LOGGER.debug("[PLogin] 皮肤查询失败 {}: {}", url, e.toString());
+            PLogin.LOGGER.debug("[PLogin] 皮肤查询失败：{}（{}）", url, e.toString());
         }
         return null;
     }

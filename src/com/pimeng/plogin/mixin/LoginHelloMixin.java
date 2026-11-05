@@ -57,7 +57,7 @@ public abstract class LoginHelloMixin {
         // 离线令牌无效时客户端只显示“无效会话”，完全看不到服务端本来要拒绝的原因。
         // 这里直接在登录阶段断开并发送明确原因，避免把“正版名保护”伪装成客户端故障。
         if (offlineProfileId && protectPremiumName) {
-            PLogin.LOGGER.warn("[PLogin] 拒绝离线客户端 {} ({}): 该名字属于正版账号且没有离线备份密码，"
+            PLogin.LOGGER.warn("[PLogin] 拒绝离线客户端 {}（{}）：该名字属于正版账号且没有离线备份密码，"
                     + "已直接断开（避免客户端显示“无效会话”）", name, profileId);
             ((ServerLoginPacketListenerImpl) (Object) this).disconnect(Messages.get("premium.name"));
             ci.cancel();
@@ -65,7 +65,7 @@ public abstract class LoginHelloMixin {
         }
 
         this.plogin$skipClientAuth = skip;
-        PLogin.LOGGER.info("[PLogin] Login Start: name={}, profileId={}, offlineProfileId={}, knownPremium={}, hasBackup={}, protectPremiumName={}, skipClientAuth={}",
+        PLogin.LOGGER.info("[PLogin] 登录开始：名字={}，profileId={}，离线 profileId={}，已知正版={}，有离线备份={}，正版名保护={}，跳过客户端验证={}",
                 name, profileId, offlineProfileId, knownPremium != null, hasBackup, protectPremiumName, skip);
     }
 

@@ -470,7 +470,7 @@ MC_SERVER=/path/to/minecraft-server ./build.sh
 5. 重启服务器，日志应出现：
 
 ```text
-   PLogin 1.1.0 已加载，数据目录: ./config/plogin
+   [PLogin] 已加载 v1.1.0，数据目录：./config/plogin
    [PLogin] 混合登录已启用（online-mode=true）：正版玩家验证后直接进入，离线玩家在配置阶段通过对话框注册/登录
 ```
 

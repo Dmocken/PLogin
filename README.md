@@ -73,7 +73,7 @@ PLogin 正是靠「先按正版验证、失败再按离线处理」来区分两�
 日志里应该出现：
 
 ```text
-PLogin 1.1.0 已加载，数据目录: ./config/plogin
+[PLogin] 已加载 v1.1.0，数据目录：./config/plogin
 [PLogin] 混合登录已启用（online-mode=true）：正版玩家验证后直接进入，离线玩家在配置阶段通过对话框注册/登录
 ```
 
@@ -191,7 +191,7 @@ PLogin 1.1.0 已加载，数据目录: ./config/plogin
 
 **离线玩家提示「无效会话（请尝试重启游戏及启动器）」**
 说明启动器在登录握手时发了随机 UUID 而不是离线 UUID。服务端日志里能看到
-`Login Start ... offlineProfileId=false`。PCL2、HMCL 默认是正常的，遇到这种情况请换启动器或换版本。
+`登录开始 ... 离线 profileId=false`。PCL2、HMCL 默认是正常的，遇到这种情况请换启动器或换版本。
 
 **离线客户端提示「该用户名已被正版账号占用」**
 这说明这个 ID 之前已经用正版账号验证过，服务端在 `premium-names.json` 里记录了它，而当前离线连接没有离线备份密码。

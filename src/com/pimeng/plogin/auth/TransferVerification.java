@@ -54,12 +54,12 @@ final class TransferVerification {
             return null;
         }
         if (!pending.name().equals(name == null ? "" : name.toLowerCase(Locale.ROOT))) {
-            PLogin.LOGGER.warn("[PLogin] transfer 凭据的用户名不匹配: 发放={} 当前={}", pending.name(), name);
+            PLogin.LOGGER.warn("[PLogin] transfer 凭据的用户名不匹配：发放={}，当前={}", pending.name(), name);
             return null;
         }
         if (pending.bindIp() && !pending.ip().isEmpty()
                 && !pending.ip().equals(ip == null ? "" : ip)) {
-            PLogin.LOGGER.warn("[PLogin] transfer 凭据的 IP 与发放时不一致: 发放={} 当前={}", pending.ip(), ip);
+            PLogin.LOGGER.warn("[PLogin] transfer 凭据的 IP 与发放时不一致：发放={}，当前={}", pending.ip(), ip);
             return null;
         }
         return pending;
