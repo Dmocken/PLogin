@@ -23,17 +23,17 @@ public final class Messages {
         // ---------------- 中文 ----------------
         // 配置阶段对话框
         ZH.put("dialog.login.title", "登录服务器");
-        ZH.put("dialog.login.body", "欢迎回来，%s！请输入密码完成登录。");
+        ZH.put("dialog.login.body", "欢迎回来，%s！请输入密码登录");
         ZH.put("dialog.register.title", "注册账号");
-        ZH.put("dialog.register.body", "欢迎，%s！这是第一次进入服务器，请设置登录密码。");
-        ZH.put("dialog.register.rules", "密码长度 %d-%d 位，不能与游戏 ID 相同。");
-        ZH.put("dialog.timeout", "请在 %d 秒内完成操作，超时会被断开。");
+        ZH.put("dialog.register.body", "欢迎，%s！请设置登录密码");
+        ZH.put("dialog.register.rules", "密码长度 %d-%d 位，不能与游戏 ID 相同");
+        ZH.put("dialog.timeout", "请在 %d 秒内完成操作，超时会被断开");
         ZH.put("dialog.input.password", "密码");
         ZH.put("dialog.input.confirm", "确认密码");
         ZH.put("dialog.button.login", "登录");
         ZH.put("dialog.button.register", "注册");
         ZH.put("dialog.button.exit", "退出服务器");
-        ZH.put("disconnect.closed", "你已退出登录界面。");
+        ZH.put("disconnect.closed", "你已退出登录界面");
 
         // 认证结果 / 欢迎
         ZH.put("welcome.premium", "§a正版验证通过§f，欢迎回来，§e%s§f！");
@@ -52,45 +52,45 @@ public final class Messages {
         ZH.put("register.mismatch", "§c两次输入的密码不一致。");
         ZH.put("register.same_name", "§c密码不能与用户名相同。");
         ZH.put("register.exists", "§c该用户名已经注册，请在登录框输入密码。");
-        ZH.put("register.premium_name", "§c该用户名属于正版账号，无法用离线身份注册。请使用正版账号登录或更换游戏 ID。");
+        ZH.put("register.premium_name", "§c该昵称已被占用，请更换游戏 ID。");
         ZH.put("register.busy", "§7正在处理，请稍候...");
         ZH.put("register.save_failed", "§c保存账号数据失败，请稍后重试；若持续失败请联系管理员。");
         ZH.put("register.already", "§7登录已经在进入服务器前完成；如需修改密码请使用 §e/changepassword§7。");
-        ZH.put("login.not_registered", "§c你还没有注册，请先设置密码注册。");
-        ZH.put("login.wrong", "§c密码错误，还可以尝试 %d 次。");
-        ZH.put("login.banned", "§c密码错误次数过多，IP 已被临时封禁 %d 秒。");
+        ZH.put("login.not_registered", "§c你还没有注册，请先设置密码注册");
+        ZH.put("login.wrong", "§c密码错误，还可以尝试 %d 次");
+        ZH.put("login.banned", "§c密码错误次数过多，IP 已被临时封禁");
         ZH.put("login.account_locked", "§c该账号因多次密码错误被临时锁定，请 %d 秒后再试。");
-        ZH.put("ip.banned", "§c你的 IP 因多次登录失败被临时封禁，剩余 %d 秒。");
-        ZH.put("timeout", "§c登录超时，已断开连接。");
-        ZH.put("auth.corrupt", "§c账号数据文件损坏，服务器已停用离线注册/登录，请联系管理员修复后重启。");
-        ZH.put("auth.internal_error", "§c认证服务暂时不可用，请稍后重新连接。");
-        ZH.put("conflict", "§c该用户名存在不同的 UUID 记录，请联系管理员处理。");
-        ZH.put("premium.name", "§c该用户名已被正版账号占用，无法以离线身份登录。号主可先用正版账号进入并 /register 设置离线备份密码，或更换游戏 ID。");
-        ZH.put("premium.name.kick", "§c你当前使用的用户名被正版用户登录成功，请检查你所使用的用户ID是否有正版玩家使用！");
+        ZH.put("ip.banned", "§c你的 IP 因多次登录失败被临时封禁");
+        ZH.put("timeout", "§c登录超时");
+        ZH.put("auth.corrupt", "§c账号数据文件损坏，服务器已停用离线注册/登录，请联系管理员修复后重启");
+        ZH.put("auth.internal_error", "§c认证服务暂时不可用，请稍后重新连接");
+        ZH.put("conflict", "§c该用户名存在不同的 UUID 记录，请联系管理员处理");
+        ZH.put("premium.name", "§c该昵称已被正版玩家占用，请更换昵称");
+        ZH.put("premium.name.kick", "§c您当前使用的昵称被正版玩家登录，请检查你的昵称是否在正版被占用！");
 
         // 正版离线备份密码
-        ZH.put("premium.password_set", "§a已设置离线备份密码。正版验证不可用时可离线进入，输入密码后会 transfer 到正版 UUID/存档。");
-        ZH.put("premium.password_updated", "§a已更新离线备份密码。");
-        ZH.put("premium.password_disabled", "§7服务器未启用正版账号离线备份密码功能。");
-        ZH.put("premium.backup.premium_online", "§c正版同名玩家在线，暂时无法使用离线备份密码登录。请等待其下线后再试。");
-        ZH.put("name.online", "§c该用户名已有玩家在线，请稍后再试。");
-        ZH.put("transfer.unavailable", "§c无法发起服务器 transfer（目标地址未配置或凭据过多），请稍后重试或联系管理员。");
-        ZH.put("transfer.failed", "§c服务器 transfer 凭据无效或已过期，请重新连接服务器后再试。");
+        ZH.put("premium.password_set", "§a已设置密码。正版验证不可用时可离线进入");
+        ZH.put("premium.password_updated", "§a已更新离线备份密码");
+        ZH.put("premium.password_disabled", "§7服务器未启用正版账号离线备份密码功能");
+        ZH.put("premium.backup.premium_online", "§c同昵称玩家在线，请稍后再试");
+        ZH.put("name.online", "§c同昵称玩家在线，请稍后再试");
+        ZH.put("transfer.unavailable", "§c传送失败，请稍后重试或联系管理员");
+        ZH.put("transfer.failed", "§c传送凭据无效或已过期，请重新连接服务器后再试");
 
         // 已进入世界后的操作
-        ZH.put("logout.ok", "§a已登出，请重新连接服务器并完成登录。");
-        ZH.put("logout.premium", "§7正版账号无需登出。");
-        ZH.put("changepw.ok", "§a密码修改成功。");
-        ZH.put("changepw.old_wrong", "§c旧密码错误。");
-        ZH.put("changepw.premium", "§7正版账号没有离线密码。");
+        ZH.put("logout.ok", "§a已登出");
+        ZH.put("logout.premium", "§7正版账号无需登出");
+        ZH.put("changepw.ok", "§a密码修改成功");
+        ZH.put("changepw.old_wrong", "§c旧密码错误");
+        ZH.put("changepw.premium", "§7正版账号没有离线密码");
 
         // 命令 / 管理
         ZH.put("not_player", "§c该命令只能由玩家执行。");
-        ZH.put("admin.reload", "§a配置已重新加载。");
-        ZH.put("admin.unregistered", "§a已注销用户 §e%s§a。");
-        ZH.put("admin.not_found", "§c未找到用户 §e%s§c。");
+        ZH.put("admin.reload", "§a配置已重新加载");
+        ZH.put("admin.unregistered", "§a已注销用户 §e%s§a");
+        ZH.put("admin.not_found", "§c未找到用户 §e%s§c");
         ZH.put("admin.info", "§e%s§f: uuid=§7%s§f, 类型=§7%s§f, 状态=§7%s§f, 最后登录=§7%s");
-        ZH.put("admin.reset", "§a已重置 §e%s§a 的密码。");
+        ZH.put("admin.reset", "§a已重置 §e%s§a 的密码");
         ZH.put("admin.list", "§7已注册用户数：§e%d");
 
         // ---------------- English ----------------

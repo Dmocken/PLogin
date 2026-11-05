@@ -826,7 +826,7 @@ public final class ConfigAuth {
                 ipBans.put(ip, now + config.ipBanSeconds * 1000L);
                 PLogin.LOGGER.warn("[PLogin] IP {} 在窗口内累计 {} 次密码错误，临时封禁 {} 秒",
                         ip, ipFailures, config.ipBanSeconds);
-                closeWith(Messages.get("login.banned", config.ipBanSeconds));
+                closeWith(Messages.get("login.banned"));
                 return;
             }
 

@@ -16,6 +16,7 @@
 /world_nether/
 /world_the_end/
 /backups/
+/temp/
 *.log
 *.jar
 !.github/**/*.jar
