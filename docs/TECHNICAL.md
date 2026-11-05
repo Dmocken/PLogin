@@ -3,7 +3,7 @@
 > 面向开发者与高级运维：记录 1.1.0 的配置阶段对话框登录、Mixin 清单、认证状态机、皮肤注入、数据格式与实测结论。
 > 只想把模组装到服务器上的服主，请先读 [README](../README.md)。
 
-**环境基线**：Minecraft 26.2 · Fabric Loader 0.19.5+ · Fabric API · Java 25
+**环境基线**：Minecraft 26.1 / 26.2 / 26.3（每个版本一个 jar）· Fabric Loader 0.19.5+ · Fabric API · Java 25
 
 > 配套文案（宣传语、玩家提示、公告模板、命令说明）：[文案.md](文案.md)
 
@@ -408,7 +408,8 @@ PLogin/
 
 ## 4. 构建
 
-环境：Java 25（Minecraft 26.2 的最低要求），Minecraft 26.2 服务端 jar（Mojang mappings），Fabric API。
+环境：Java 25（Minecraft 26.x 的最低要求），Minecraft 26.x 服务端 jar（Mojang mappings），Fabric API。
+默认构建目标是 26.2；其他版本见下方「多版本构建」。
 
 ```bash
 ./build.sh        # Linux / macOS
@@ -419,6 +420,21 @@ PLogin/
 ```
 
 产物：`build/plogin-1.1.1.jar`
+
+### 多版本构建
+
+发布用的按版本 jar 用 `scripts/build-version.ps1` 构建，产物命名为
+`PLogin-<Minecraft 版本>-v<模组版本>.jar`：
+
+```powershell
+.\scripts\build-version.ps1 -McVersion 26.1
+.\scripts\build-version.ps1 -McVersion 26.3
+```
+
+脚本会复制 `src/`、按版本打源码补丁（目前只有 26.3 需要：authlib 10 的
+`SessionService` / `services.ProfileResult`、`Entity#setPermanentlyInvulnerable`、
+Mixin `@Redirect` 描述符）、改写 `fabric.mod.json` 的版本号，再用对应版本的
+`.mcserver-<版本>/` 依赖编译。可行性分析见[版本适配可行性](版本适配可行性.md)。
 
 首次构建可以直接跑一键脚本，它会下载 26.2 服务端 jar、131 个 Mojang 库、Fabric Loader 与 Fabric API
 到 `.mcserver/`，并拆分 Fabric API 的嵌套模块，然后自动调用构建：
@@ -455,7 +471,7 @@ MC_SERVER=/path/to/minecraft-server ./build.sh
 
 1. **服务端**：
    - Fabric Loader >= 0.19.5，Fabric API；
-   - 把 `build/plogin-1.1.1.jar` 放进 `mods/`；
+   - 把对应版本的 `PLogin-<Minecraft 版本>-v1.1.1.jar` 放进 `mods/`（本地开发构建为 `build/plogin-1.1.1.jar`）；
    - `server.properties` 保持 `online-mode=true`（混合登录的前提）。
 2. **客户端**：什么都不用装。正版客户端直接连；离线启动器客户端也能连，并在配置阶段看到对话框。
 3. **备份密码 transfer 需要**：

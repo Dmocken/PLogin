@@ -7,6 +7,7 @@
 # ---- 本地 Minecraft 服务端 / 依赖（Mojang 版权产物，不入库） ----
 /versions/
 /.mcserver/
+/.mcserver-*/
 /server/
 
 # ---- 运行时数据 ----

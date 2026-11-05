@@ -1,6 +1,6 @@
 # PLogin
 
-**Minecraft 26.2 · Fabric 服务端模组 · 正版与离线玩家共存 · 客户端零模组**
+**Minecraft 26.1 / 26.2 / 26.3 · Fabric 服务端模组 · 正版与离线玩家共存 · 客户端零模组**
 
 服务器继续开着 `online-mode=true`，正版玩家照旧通过验证直接进服，UUID、皮肤、披风全部来自 Mojang；
 用离线启动器的玩家也能进，但会在原版的 **Configuration（配置）阶段** 收到一个登录对话框：
@@ -48,14 +48,15 @@ PLogin 把两条路合成一条：同一条登录流程里先做正版验证，�
 
 | 项目 | 要求 |
 |---|---|
-| Minecraft | 26.2 |
+| Minecraft | 26.1 / 26.2 / 26.3（每个版本一个 jar，不能混用） |
 | Fabric Loader | 0.19.5 或更高 |
-| Fabric API | 对应 26.2 的版本，放在 `mods/` |
-| Java | 25（Minecraft 26.2 的最低要求） |
+| Fabric API | 对应 Minecraft 版本的 Fabric API，放在 `mods/` |
+| Java | 25（Minecraft 26.x 的最低要求） |
 
 ### 2. 安装
 
-把 `plogin-1.1.1.jar`（从仓库 Releases 下载，或按[构建](#构建)自行编译）放进服务器的 `mods/` 目录，
+把对应 Minecraft 版本的 `PLogin-<Minecraft 版本>-v1.1.1.jar`（例如 26.2 用 `PLogin-26.2-v1.1.1.jar`；
+从仓库 Releases 下载，或按[构建](#构建)自行编译）放进服务器的 `mods/` 目录，
 和 `fabric-api-*.jar` 放在一起，然后重启。
 
 > 客户端什么都不用装。正版客户端直接连；离线启动器客户端也能连，并在配置阶段看到注册对话框。
@@ -262,14 +263,15 @@ PLogin 会改变服务器的安全边界，上线前请确认这几点：
 - 皮肤站披风无法被 MineSkin 签名，只有本机可见（除非使用正版账号的签名属性）。
 - 未登录玩家仍是一条配置阶段的连接，服务器日志和连接列表能看到；但他们不在 PlayerList、Tab 或世界中。
 - `kickOnTimeout=false` 时，未完成登录的连接会一直占用一个玩家槽位，直到玩家自己退出或断线。
-- 对话框依赖 26.2 客户端的原版 Dialog 界面；客户端必须是 26.2（服务端本来就只接受同协议客户端）。
+- 对话框依赖 26.x 客户端的原版 Dialog 界面；客户端版本必须与服务端一致（原版只接受同协议客户端）。
 - 原版 Dialog 没有密码遮罩控件，登录/注册的密码框输入时可见；请提醒玩家注意周围环境。
 
 ---
 
 ## 构建
 
-仓库不附带 Minecraft 服务端 jar（Mojang 版权产物）。一条命令就能把 26.2 的依赖全部拉下来并编译：
+仓库不附带 Minecraft 服务端 jar（Mojang 版权产物）。一条命令就能把 26.2 的依赖全部拉下来并编译
+（PowerShell 用 `-McVersion 26.3`、bash 用 `--mc 26.3` 可以拉其他版本）：
 
 ```bash
 ./scripts/fetch-deps.sh --build      # Linux / macOS
@@ -284,6 +286,15 @@ PLogin 会改变服务器的安全边界，上线前请确认这几点：
 
 产物：`build/plogin-1.1.1.jar`，依赖落在 `.mcserver/`（不进入版本库）。
 
+发布用的多版本 jar 用按版本构建脚本生成，产物命名为 `PLogin-<Minecraft 版本>-v<模组版本>.jar`：
+
+```powershell
+.\scripts\build-version.ps1 -McVersion 26.1
+.\scripts\build-version.ps1 -McVersion 26.3
+```
+
+各版本差异（例如 26.3 的 authlib 10 适配）集中在该脚本里，细节见[版本适配可行性](docs/版本适配可行性.md)。
+
 已经装好服务端、只想编译的话，直接用 `./build.sh` 或 `.\build.ps1`，
 用 `MC_SERVER` 指向服务端目录即可。细节见[技术文档 §4](docs/TECHNICAL.md#4-构建)。
 
@@ -295,7 +306,8 @@ PLogin 会改变服务器的安全边界，上线前请确认这几点：
 |---|---|
 | [docs/TECHNICAL.md](docs/TECHNICAL.md) | 实现原理、Mixin 清单、认证状态机、数据格式、实测记录 |
 | [docs/文案.md](docs/文案.md) | 宣传文案、玩家提示、开服公告模板、命令说明 |
-| [scripts/fetch-deps.sh](scripts/fetch-deps.sh) / [.ps1](scripts/fetch-deps.ps1) | 一键拉取 26.2 依赖并构建 |
+| [scripts/fetch-deps.sh](scripts/fetch-deps.sh) / [.ps1](scripts/fetch-deps.ps1) | 一键拉取依赖并构建（默认 26.2） |
+| [scripts/build-version.ps1](scripts/build-version.ps1) | 按 Minecraft 版本构建发布 jar |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | 开发环境、代码结构、提交规范 |
 | [SECURITY.md](SECURITY.md) | 安全问题反馈方式 |
 | [CHANGELOG.md](CHANGELOG.md) | 版本变更记录 |

@@ -16,6 +16,10 @@
   皮肤签名状态由 `signed` / `unsigned` 改为「已签名」/「未签名」。
 - `docs/文案.md` 按新文案重写玩家提示表；`README.md`、`docs/TECHNICAL.md` 的示例日志与排错提示同步更新，
   `CONTRIBUTING.md` 补充日志书写约定。
+- **多版本发布**：新增 `PLogin-26.1-v1.1.1.jar`、`PLogin-26.3-v1.1.1.jar`，发布文件统一命名为
+  `PLogin-<Minecraft 版本>-v<模组版本>.jar`。26.1 版源码无改动；26.3 版适配 authlib 10
+  （`SessionService` / `services.ProfileResult`）与 `Entity#setPermanentlyInvulnerable`。
+  两个版本均已通过 Fabric Loader 0.20.1 启动冒烟测试。
 
 ## [1.1.0] - 2026-11-05
 
