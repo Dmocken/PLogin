@@ -21,6 +21,12 @@ param(
 $ErrorActionPreference = 'Stop'
 Set-Location (Split-Path -Parent $PSScriptRoot)
 
+# 1.21.x 的服务端 jar 是混淆的、Fabric 运行时是 intermediary，javac 直编出来的 jar 无法被加载，
+# 必须走 build.gradle.kts（Loom）这条管线：反混淆编译 + remapJar 到 intermediary。
+if ($McVersion -match '^1\.21\.') {
+    Write-Error "Minecraft $McVersion 不能用 javac 直编，请改用：.\gradlew build -Pmc_version=$McVersion -Pfabric_api_version=<对应版本>"
+}
+
 if (-not $DepsDir) { $DepsDir = Join-Path $PWD ".mcserver-$McVersion" }
 $DepsDir = [System.IO.Path]::GetFullPath($DepsDir)
 

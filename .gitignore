@@ -4,6 +4,13 @@
 /dist/
 *.class
 
+# ---- Gradle / Loom（1.21.x 构建） ----
+/.gradle/
+/.kotlin/
+/run/
+/runs/
+*.hprof
+
 # ---- 本地 Minecraft 服务端 / 依赖（Mojang 版权产物，不入库） ----
 /versions/
 /.mcserver/
@@ -21,6 +28,7 @@
 *.log
 *.jar
 !.github/**/*.jar
+!/gradle/wrapper/gradle-wrapper.jar
 
 # ---- IDE ----
 .idea/

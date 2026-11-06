@@ -3,7 +3,8 @@
 > 面向开发者与高级运维：记录 1.1.0 的配置阶段对话框登录、Mixin 清单、认证状态机、皮肤注入、数据格式与实测结论。
 > 只想把模组装到服务器上的服主，请先读 [README](../README.md)。
 
-**环境基线**：Minecraft 26.1 / 26.2 / 26.3（每个版本一个 jar）· Fabric Loader 0.19.5+ · Fabric API · Java 25
+**环境基线**：Minecraft 1.21.10 / 26.1 / 26.2 / 26.3（每个版本一个 jar）· Fabric Loader 0.19.5+ ·
+Fabric API · Java 21（1.21.10）/ 25（26.x）
 
 > 配套文案（宣传语、玩家提示、公告模板、命令说明）：[文案.md](文案.md)
 
@@ -381,7 +382,9 @@ LittleSkin 的 cape/elytra 会写入未签名属性，MineSkin 不支持任意�
 PLogin/
 ├── README.md                       ← 面向服主的使用说明
 ├── LICENSE                         ← AGPL-3.0
-├── build.sh / build.ps1            ← 无 Gradle 的直接 javac 构建脚本
+├── build.sh / build.ps1            ← 26.x：无 Gradle 的直接 javac 构建脚本
+├── build.gradle.kts / settings.gradle.kts / gradlew*
+│                                   ← 1.21.x：Loom 构建（源码补丁 + remap 到 intermediary）
 ├── docs/
 │   ├── TECHNICAL.md                ← 本文件
 │   └── 文案.md                      ← 宣传/玩家提示/公告/命令文案汇总
@@ -460,10 +463,51 @@ Mixin `@Redirect` 描述符）、改写 `fabric.mod.json` 的版本号，再用�
 MC_SERVER=/path/to/minecraft-server ./build.sh
 ```
 
-不需要 Gradle/Loom；本环境 Fabric Loader 使用 Mojang 官方名（启动日志 `Mappings not present!`），
+不需要 Gradle/Loom；26.x 的 Fabric Loader 使用 Mojang 官方名（启动日志 `Mappings not present!`），
 因此源码直接用 `net.minecraft.server.level.ServerPlayer` 这类 Mojang 名。
 
 > 仓库不附带 Minecraft 服务端 jar（Mojang 版权产物），`versions/`、`build/` 已在 `.gitignore` 中排除。
+
+### 1.21.x 构建（Gradle + Loom）
+
+1.21.x 与 26.x 的差别不在业务逻辑，而在**命名空间**：服务端 jar 是混淆的，Fabric 运行时是
+intermediary（`net.fabricmc:intermediary:1.21.10`）。所以 `javac` 直编出来的 class 在 1.21.10 上
+既找不到 `net.minecraft.server.MinecraftServer`，`@Inject` 里的 Mojmap 方法名也指不到任何东西。
+
+`build.gradle.kts` 的处理顺序：
+
+1. `patchSources`：把 `src/` 复制到 `build/generated/plogin-src-<版本>/`，按版本打命名补丁
+   （1.21.9 / 1.21.10：`Identifier` → `ResourceLocation`、
+   `source.permissions().hasPermission(Permissions.COMMANDS_ADMIN)` → `source.hasPermission(3)`），
+   并改写 `fabric.mod.json` 的 `depends.minecraft` 与版本号；
+2. `loom.officialMojangMappings()` 反混淆服务端 jar，`fabric-api` 由 Loom 自动从 intermediary remap；
+3. `remapJar` 把产物 class 与 Mixin 注解字符串一起 remap 到 intermediary。Loom 1.19 起不再默认启用
+   Mixin 注解处理器，也不再生成 refmap：`plogin.mixins.json` 原样进 jar，注解里的
+   `returnToWorld` / `configurationTasks` 这类 Mojmap 名字由 Loom 直接改写成
+   `method_52410` / `field_45023`。
+
+```powershell
+.\gradlew build                    # 默认 1.21.10（build.gradle.kts 顶部）
+.\gradlew build -Pmc_version=1.21.11 -Pfabric_api_version=0.141.6+1.21.11
+```
+
+产物 `build/libs/PLogin-1.21.10-v1.1.1.jar`。已实测：Gradle 9.8.2 + Loom 1.19.3 构建通过，
+`gradlew runServer` 在 1.21.10 开发服务端上正常加载（Mixin 无 apply failed，
+`enforce-secure-profile` 有效值被 `DedicatedServerMixin` 改成 false）。
+
+1.21.10 上额外的两处源码修正，都是「按 Mojmap 名字反射」在 intermediary 运行时失效：
+
+| 位置 | 原实现 | 1.21.10 实际 | 现在 |
+|---|---|---|---|
+| `TransferState.connectionOf` | `getDeclaredField("connection")` | 字段是 `field_xxxxx` | 走 `ServerCommonPacketListenerAccessor`（Mixin 会被 remap） |
+| `LoginThreadMixin.plogin$listener` | `getDeclaredField("this$0")` | `ServerLoginPacketListenerImpl$1` 里持有监听器的字段是带映射的 `field_14176`（`Lnet/minecraft/class_3248;`），根本没有 `this$0` | 扫描声明字段，取「非静态且类型是 `ServerLoginPacketListenerImpl`」的那个；并且只在名字登记过离线备份密码时才查找 |
+
+> 判断字段类型在两个命名空间都成立：我们的 `ServerLoginPacketListenerImpl` 引用和字段类型
+> 都会被 remap 到同一个 intermediary 类。
+
+> 1.21.4 / 1.21.5 没有 Dialog 系统，1.21.6–1.21.8 有 Dialog 但 `ConfigurationTask#tick()` 尚未加入，
+> 都无法承载「配置阶段对话框等待输入」这套流程。1.21.9 起才齐备，详见
+> [版本适配可行性](版本适配可行性.md)。
 
 ---
 

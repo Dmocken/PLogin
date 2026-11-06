@@ -10,14 +10,18 @@
 
 | 项目 | 要求 |
 |---|---|
-| JDK | 25（Minecraft 26.2 的最低要求） |
+| JDK | 25（26.x）/ 21（1.21.x，用更高版本 JDK 加 `--release 21` 也可以） |
 | Minecraft | 26.2 服务端 jar（Mojang 官方名，非 intermediary） |
 | Fabric Loader | 0.19.5 或更高 |
-| Fabric API | 对应 26.2 的版本 |
+| Fabric API | 对应目标版本的版本 |
 
-本项目**不使用 Gradle / Loom**，直接 `javac` 编译。源码里写的是 Mojang 官方映射名
-（`net.minecraft.server.level.ServerPlayer` 这种），因为运行时 Fabric Loader 日志里是
-`Mappings not present!`。
+**26.x 不使用 Gradle / Loom**，直接 `javac` 编译。源码里写的是 Mojang 官方映射名
+（`net.minecraft.server.level.ServerPlayer` 这种），因为 26.1 起运行时 Fabric Loader 日志里是
+`Mappings not present!`（运行时就叫 Mojang 名）。
+
+**1.21.x 必须走 Gradle + Loom**：服务端 jar 混淆、Fabric 运行时是 intermediary，
+产物和 Mixin 注解字符串都要 remap。`build.gradle.kts` 会在编译前把 `src/` 复制到
+`build/generated/plogin-src-<版本>/` 并按版本打命名补丁，所以**只维护 `src/` 一份源码**。
 
 ## 构建
 
@@ -60,6 +64,25 @@ $env:MC_SERVER = 'D:\path\to\minecraft-server'
 - `libraries/**/*.jar`
 
 > 请**不要**把服务端 jar、日志、世界存档提交进仓库，`.gitignore` 已经排除了这些路径。
+
+### 1.21.x
+
+```powershell
+.\gradlew build            # 默认 1.21.10
+.\gradlew runServer        # 起一个开发服务端，验证 Mixin 是否注入成功
+```
+
+首次构建会下载 Loom、Minecraft 1.21.10、Mojang mappings 与 Fabric API 到 Gradle 缓存
+（几百 MB，只在第一次慢）。产物：`build/libs/PLogin-1.21.10-v1.1.1.jar`。
+`runServer` 需要先在 `run/eula.txt` 里写 `eula=true`（`run/` 已被 `.gitignore` 排除）。
+
+版本相关的源码差异只在 `build.gradle.kts` 的 `patchJava()` 里（`legacyNaming`）：
+
+- `net.minecraft.resources.Identifier` → `ResourceLocation`（1.21.11 才改名）
+- `source.permissions().hasPermission(Permissions.COMMANDS_ADMIN)` → `source.hasPermission(3)`
+  （1.21.11 才有 `Permissions` / `PermissionSet`）
+
+新增版本差异时请改这里，不要在 `src/` 里加版本分支。
 
 > Fabric API 的发布 jar 是个 bundle，模块以嵌套 jar 形式放在 `META-INF/jars/` 里。
 > 首次编译前需要把它们解压到 `.fabric/processedMods/`，否则 javac 找不到

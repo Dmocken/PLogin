@@ -9,6 +9,7 @@ import com.pimeng.plogin.auth.TransferState;
 import com.pimeng.plogin.auth.UserStore;
 import com.pimeng.plogin.config.Config;
 import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 import java.net.InetAddress;
 import net.minecraft.network.Connection;
 import net.minecraft.server.network.ServerLoginPacketListenerImpl;
@@ -38,16 +39,17 @@ public abstract class LoginThreadMixin {
     )
     private ProfileResult plogin$hybridVerify(MinecraftSessionService service, String name, String digest, InetAddress address)
             throws AuthenticationUnavailableException {
-        ServerLoginPacketListenerImpl listener = plogin$outer(this);
         boolean transferRequested = false;
         byte[] transferSecret = null;
         String transferIp = "";
-        if (listener != null) {
-            boolean transferred = ((ServerLoginPacketListenerAccessor) listener).plogin$transferred();
-            UserStore users = PLogin.users();
-            Config config = PLogin.config();
-            if (transferred && users != null && config != null && config.enabled
-                    && users.hasPremiumBackup(name)) {
+        // 只有“登记过离线备份密码”的名字才可能走 transfer 重连；
+        // 普通登录（含所有正版玩家）完全不碰反射，也不向客户端索要 Cookie。
+        UserStore users = PLogin.users();
+        Config config = PLogin.config();
+        if (users != null && config != null && config.enabled && users.hasPremiumBackup(name)) {
+            ServerLoginPacketListenerImpl listener = plogin$listener(this);
+            if (listener != null
+                    && ((ServerLoginPacketListenerAccessor) listener).plogin$transferred()) {
                 Connection connection = TransferState.connectionOf(listener);
                 transferIp = TransferState.remoteIp(connection);
                 transferSecret = TransferState.requestAndWait(connection, config.transferTokenWaitMs);
@@ -57,15 +59,35 @@ public abstract class LoginThreadMixin {
         return HybridAuth.verify(service, name, digest, address, transferSecret, transferRequested, transferIp);
     }
 
+    /**
+     * 取出登录线程持有的 {@code ServerLoginPacketListenerImpl}。
+     *
+     * <p>字段名随版本变化，不能按名字找：26.x 是 javac 合成的 {@code this$0}，
+     * 1.21.10 的服务端 jar 里这个引用是混淆后带映射的 {@code field_14176}（Mojmap 名同样不是
+     * {@code this$0}）。所以按“非静态且类型是 ServerLoginPacketListenerImpl”来找——
+     * 两个命名空间下字段类型都会被 remap 成同一个类，判断成立。
+     */
     @Unique
-    private static ServerLoginPacketListenerImpl plogin$outer(Object thread) {
-        try {
-            Field outer = thread.getClass().getDeclaredField("this$0");
-            outer.setAccessible(true);
-            return (ServerLoginPacketListenerImpl) outer.get(thread);
-        } catch (ReflectiveOperationException | RuntimeException e) {
-            PLogin.LOGGER.warn("[PLogin] 无法获取登录监听器，transfer 凭据不可用", e);
-            return null;
+    private static ServerLoginPacketListenerImpl plogin$listener(Object thread) {
+        Class<?> type = thread.getClass();
+        for (Field field : type.getDeclaredFields()) {
+            if (Modifier.isStatic(field.getModifiers())) {
+                continue;
+            }
+            if (!ServerLoginPacketListenerImpl.class.isAssignableFrom(field.getType())) {
+                continue;
+            }
+            try {
+                field.setAccessible(true);
+                if (field.get(thread) instanceof ServerLoginPacketListenerImpl listener) {
+                    return listener;
+                }
+            } catch (ReflectiveOperationException | RuntimeException e) {
+                PLogin.LOGGER.debug("[PLogin] 读取登录监听器字段 {} 失败", field.getName(), e);
+            }
         }
+        PLogin.LOGGER.debug("[PLogin] 登录线程 {} 上没有找到登录监听器字段，transfer 凭据不可用",
+                type.getName());
+        return null;
     }
 }

@@ -3,6 +3,38 @@
 本项目的重要变更都记录在这里，格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，
 版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [未发布]
+
+### 新增
+
+- **Minecraft 1.21.10 支持**。1.1.x 的「配置阶段对话框」设计在 1.21.10 上源码级成立
+  （Dialog 系统 1.21.6 起、`ConfigurationTask#tick()` 1.21.9 起），差异只有两处命名：
+  `Identifier` → `ResourceLocation`、`Permissions` → `CommandSourceStack#hasPermission(3)`。
+- **1.21.x 构建管线（Gradle + Loom）**：1.21.x 的服务端 jar 是混淆的、Fabric 运行时是 intermediary，
+  `javac` 直编的产物无法加载。新增 `build.gradle.kts` / `settings.gradle.kts` / Gradle wrapper，
+  构建前把 `src/` 复制到 `build/generated/` 并按目标版本打命名补丁，编译后由 Loom 把 class 与
+  Mixin 注解字符串一起 remap 到 intermediary。26.x 继续用原来的 `javac` 脚本，源码仍只有一份。
+- `scripts/build-version.ps1` 遇到 1.21.x 会直接报错并提示改用 `gradlew`，避免生成无法加载的 jar。
+
+已实测（Windows / Gradle 9.8.2 / Loom 1.19.3 / JDK 27 配 `--release 21`）：
+`.\gradlew build` 产出 `build/libs/PLogin-1.21.10-v1.1.1.jar`；`.\gradlew runServer` 在
+Minecraft 1.21.10 开发服务端启动到 `Done`，PLogin 初始化正常、无 Mixin `apply failed`。
+未做真实客户端（正版 / 离线启动器）的对话框与 transfer 全流程测试。
+
+### 修复
+
+- **1.21.10 上 transfer 凭据失效（每次登录刷一条 `NoSuchFieldException: this$0`）**。
+  `LoginThreadMixin` 原来用 `getDeclaredField("this$0")` 从登录线程取
+  `ServerLoginPacketListenerImpl`；26.x 里这个引用确实是 javac 合成的 `this$0`，
+  但 1.21.10 服务端 jar 里它是混淆后带映射的 `field_14176`，反射必然抛
+  `NoSuchFieldException`，transfer Cookie 永远取不到，备份密码登录会退化成离线 UUID。
+  现在按「非静态且类型是 `ServerLoginPacketListenerImpl` 的字段」查找，两个版本都成立；
+  同时只有名字登记过离线备份密码时才做这次查找，普通登录不再触发反射，也不再每个连接打一条 WARN。
+- **`TransferState.connectionOf` 不再按字段名反射**。原实现用
+  `getDeclaredField("connection")` 读取监听器的连接，只在 Mojmap 运行时成立；intermediary 运行时
+  字段名是 `field_xxxxx`，反射必然失败，transfer Cookie 会静默取不到、备份密码登录退化成离线 UUID。
+  现在统一走 `ServerCommonPacketListenerAccessor`（Mixin 会被 remap），两个命名空间下都正确。
+
 ## [1.1.1] - 2026-11-05
 
 ### 变更

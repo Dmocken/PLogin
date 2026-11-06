@@ -1,6 +1,6 @@
 package com.pimeng.plogin.auth;
 
-import java.lang.reflect.Field;
+import com.pimeng.plogin.mixin.ServerCommonPacketListenerAccessor;
 import java.util.Collections;
 import java.util.Map;
 import java.util.WeakHashMap;
@@ -8,6 +8,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import net.minecraft.network.Connection;
 import net.minecraft.network.protocol.cookie.ClientboundCookieRequestPacket;
 import net.minecraft.resources.Identifier;
+import net.minecraft.server.network.ServerCommonPacketListenerImpl;
 
 /**
  * transfer 相关的连接级状态：
@@ -30,15 +31,20 @@ public final class TransferState {
     private TransferState() {
     }
 
+    /**
+     * 读取监听器底层的 {@link Connection}。
+     *
+     * <p>这里必须走 Mixin accessor 而不是反射：1.21.x 的运行时是 intermediary 命名空间，
+     * 字段名在线上是 {@code field_xxxxx}，按 Mojmap 名 {@code connection} 反射会永远取不到，
+     * 导致 transfer Cookie 静默失效。
+     */
     public static Connection connectionOf(Object listener) {
-        if (listener == null) {
+        if (!(listener instanceof ServerCommonPacketListenerImpl common)) {
             return null;
         }
         try {
-            Field field = listener.getClass().getDeclaredField("connection");
-            field.setAccessible(true);
-            return (Connection) field.get(listener);
-        } catch (ReflectiveOperationException | RuntimeException e) {
+            return ((ServerCommonPacketListenerAccessor) common).plogin$connection();
+        } catch (Throwable t) {
             return null;
         }
     }

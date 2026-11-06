@@ -1,6 +1,6 @@
 # PLogin
 
-**Minecraft 26.1 / 26.2 / 26.3 · Fabric 服务端模组 · 正版与离线玩家共存 · 客户端零模组**
+**Minecraft 1.21.10 / 26.1 / 26.2 / 26.3 · Fabric 服务端模组 · 正版与离线玩家共存 · 客户端零模组**
 
 服务器继续开着 `online-mode=true`，正版玩家照旧通过验证直接进服，UUID、皮肤、披风全部来自 Mojang；
 用离线启动器的玩家也能进，但会在原版的 **Configuration（配置）阶段** 收到一个登录对话框：
@@ -48,10 +48,10 @@ PLogin 把两条路合成一条：同一条登录流程里先做正版验证，�
 
 | 项目 | 要求 |
 |---|---|
-| Minecraft | 26.1 / 26.2 / 26.3（每个版本一个 jar，不能混用） |
+| Minecraft | 1.21.10 / 26.1 / 26.2 / 26.3（每个版本一个 jar，不能混用） |
 | Fabric Loader | 0.19.5 或更高 |
 | Fabric API | 对应 Minecraft 版本的 Fabric API，放在 `mods/` |
-| Java | 25（Minecraft 26.x 的最低要求） |
+| Java | 21（1.21.10）/ 25（26.x） |
 
 ### 2. 安装
 
@@ -227,7 +227,8 @@ OP 执行 `/plogin resetpassword <玩家> <新密码>`。整条记录不要了�
 
 **升级到新版本 Minecraft 怎么办？**
 这是依赖特定版本内部实现的模组（Mixin 直接改配置阶段任务队列），换版本必须重新编译适配，
-不能直接把旧 jar 丢进新版本的 `mods/`。
+不能直接把旧 jar 丢进新版本的 `mods/`。26.x 用 javac 直编、1.21.x 用 Gradle + Loom，
+两条管线的选择见[构建](#构建)。
 
 更多排查细节和边界情况见[技术文档 §14 已知限制](docs/TECHNICAL.md#14-已知限制)。
 
@@ -263,12 +264,19 @@ PLogin 会改变服务器的安全边界，上线前请确认这几点：
 - 皮肤站披风无法被 MineSkin 签名，只有本机可见（除非使用正版账号的签名属性）。
 - 未登录玩家仍是一条配置阶段的连接，服务器日志和连接列表能看到；但他们不在 PlayerList、Tab 或世界中。
 - `kickOnTimeout=false` 时，未完成登录的连接会一直占用一个玩家槽位，直到玩家自己退出或断线。
-- 对话框依赖 26.x 客户端的原版 Dialog 界面；客户端版本必须与服务端一致（原版只接受同协议客户端）。
+- 对话框依赖原版 Dialog 界面（1.21.6 起）；客户端版本必须与服务端一致（原版只接受同协议客户端）。
 - 原版 Dialog 没有密码遮罩控件，登录/注册的密码框输入时可见；请提醒玩家注意周围环境。
 
 ---
 
 ## 构建
+
+两个构建管线，按目标版本选一个：
+
+- **26.x**：服务端 jar 是反混淆的、Fabric 运行时直接用 Mojang 名，`javac` 直编即可（不需要 Gradle）。
+- **1.21.x**：服务端 jar 是混淆的、Fabric 运行时是 intermediary，必须 remap，走 `Gradle + Loom`。
+
+### 26.x（javac 直编，无 Gradle）
 
 仓库不附带 Minecraft 服务端 jar（Mojang 版权产物）。一条命令就能把 26.2 的依赖全部拉下来并编译
 （PowerShell 用 `-McVersion 26.3`、bash 用 `--mc 26.3` 可以拉其他版本）：
@@ -298,6 +306,27 @@ PLogin 会改变服务器的安全边界，上线前请确认这几点：
 已经装好服务端、只想编译的话，直接用 `./build.sh` 或 `.\build.ps1`，
 用 `MC_SERVER` 指向服务端目录即可。细节见[技术文档 §4](docs/TECHNICAL.md#4-构建)。
 
+### 1.21.x（Gradle + Loom，自动 remap）
+
+```powershell
+.\gradlew build          # 默认 1.21.10（版本写在 build.gradle.kts 顶部，可用 -P 覆盖）
+```
+
+产物：`build/libs/PLogin-1.21.10-v1.1.1.jar`。源码仍然只有 `src/` 一份：构建前脚本会把它复制到
+`build/generated/plogin-src-<版本>/` 并打上该版本的命名补丁（1.21.9 / 1.21.10 的
+`Identifier` → `ResourceLocation`、权限改回 `hasPermission(3)`），然后交给 Loom 反混淆服务端 jar、
+编译、再把产物和 Mixin 注解一起 remap 到 intermediary。
+
+换版本时同时改依赖版本（例如 1.21.11）：
+
+```powershell
+.\gradlew build -Pmc_version=1.21.11 -Pfabric_api_version=0.141.6+1.21.11
+```
+
+`java { }` 与 `options.release` 固定为 Java 21（1.21.x 的要求）。本机 JDK 高于 21 也能构建。
+首次构建需要联网下载 Loom、Minecraft 1.21.10、Mojang mappings 与 Fabric API（几百 MB）。
+Loom 1.19.3 要求 Gradle ≥ 9.8，仓库自带的 wrapper 已是 9.8.2。
+
 ---
 
 ## 文档 / 目录
@@ -307,7 +336,8 @@ PLogin 会改变服务器的安全边界，上线前请确认这几点：
 | [docs/TECHNICAL.md](docs/TECHNICAL.md) | 实现原理、Mixin 清单、认证状态机、数据格式、实测记录 |
 | [docs/文案.md](docs/文案.md) | 宣传文案、玩家提示、开服公告模板、命令说明 |
 | [scripts/fetch-deps.sh](scripts/fetch-deps.sh) / [.ps1](scripts/fetch-deps.ps1) | 一键拉取依赖并构建（默认 26.2） |
-| [scripts/build-version.ps1](scripts/build-version.ps1) | 按 Minecraft 版本构建发布 jar |
+| [scripts/build-version.ps1](scripts/build-version.ps1) | 按 Minecraft 版本构建发布 jar（26.x） |
+| [build.gradle.kts](build.gradle.kts) / [settings.gradle.kts](settings.gradle.kts) | 1.21.x 的 Gradle + Loom 构建（源码补丁 + remap） |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | 开发环境、代码结构、提交规范 |
 | [SECURITY.md](SECURITY.md) | 安全问题反馈方式 |
 | [CHANGELOG.md](CHANGELOG.md) | 版本变更记录 |
